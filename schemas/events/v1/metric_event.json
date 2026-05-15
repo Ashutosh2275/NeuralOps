@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://sentinelops.ai/schemas/events/v1/metric_event.json",
+  "title": "MetricEvent",
+  "allOf": [{ "$ref": "base_event.json" }],
+  "properties": {
+    "event_type": { "const": "metric" },
+    "payload": {
+      "type": "object",
+      "required": ["metric_name", "value", "unit"],
+      "properties": {
+        "pod_name": { "type": "string" },
+        "service_name": { "type": "string" },
+        "metric_name": { "type": "string" },
+        "value": { "type": "number" },
+        "unit": { "type": "string" },
+        "threshold": { "type": "number" },
+        "breached": { "type": "boolean" }
+      }
+    }
+  }
+}

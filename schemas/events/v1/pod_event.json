@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://sentinelops.ai/schemas/events/v1/pod_event.json",
+  "title": "PodEvent",
+  "allOf": [{ "$ref": "base_event.json" }],
+  "properties": {
+    "event_type": { "const": "pod" },
+    "payload": {
+      "type": "object",
+      "required": ["pod_name", "phase", "reason"],
+      "properties": {
+        "pod_name": { "type": "string" },
+        "node_name": { "type": "string" },
+        "phase": { "type": "string", "enum": ["Pending", "Running", "Succeeded", "Failed", "Unknown"] },
+        "reason": { "type": "string" },
+        "restart_count": { "type": "integer", "minimum": 0 },
+        "containers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "image": { "type": "string" },
+              "ready": { "type": "boolean" },
+              "restart_count": { "type": "integer" }
+            }
+          }
+        },
+        "owner_refs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "kind": { "type": "string" },
+              "name": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

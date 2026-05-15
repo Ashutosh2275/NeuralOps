@@ -1,0 +1,178 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: sentinelops-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-sentinelops}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sentinelops}
+      POSTGRES_DB: ${POSTGRES_DB:-sentinelops}
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sentinelops"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: sentinelops-redis
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: sentinelops-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infra/prometheus/rules:/etc/prometheus/rules:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=7d"
+      - "--web.enable-lifecycle"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  loki:
+    image: grafana/loki:2.9.4
+    container_name: sentinelops-loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./infra/loki/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+
+  promtail:
+    image: grafana/promtail:2.9.4
+    container_name: sentinelops-promtail
+    volumes:
+      - ./infra/loki/promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/log:/var/log:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: sentinelops-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+      - ./infra/ollama/entrypoint.sh:/entrypoint.sh:ro
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_MODELS=/root/.ollama/models
+      - CUDA_VISIBLE_DEVICES=0
+    entrypoint: /bin/bash
+    command: -c "ollama serve & sleep 5 && ollama pull llama3.2:1b && ollama pull mistral:latest && sleep infinity"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    profiles:
+      - gpu
+
+  ollama-cpu:
+    image: ollama/ollama:latest
+    container_name: sentinelops-ollama-cpu
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_MODELS=/root/.ollama/models
+    entrypoint: /bin/bash
+    command: -c "ollama serve & sleep 5 && ollama pull llama3.2:1b && ollama pull mistral:latest && sleep infinity"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    profiles:
+      - cpu
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sentinelops-backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      POSTGRES_HOST: postgres
+      REDIS_HOST: redis
+      PROMETHEUS_URL: http://prometheus:9090
+      LOKI_URL: http://loki:3100
+      OLLAMA_BASE_URL: http://ollama-cpu:11434
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend/src:/app/src:ro
+    profiles:
+      - app
+
+  workers:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sentinelops-workers
+    command: python -m sentinelops.workers.runner
+    env_file:
+      - .env
+    environment:
+      POSTGRES_HOST: postgres
+      REDIS_HOST: redis
+    depends_on:
+      - backend
+    profiles:
+      - app
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: sentinelops-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    profiles:
+      - app
+
+volumes:
+  postgres_data:
+  redis_data:
+  prometheus_data:
+  loki_data:
+  ollama_data:

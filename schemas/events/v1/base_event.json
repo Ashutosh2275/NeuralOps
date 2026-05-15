@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://sentinelops.ai/schemas/events/v1/base_event.json",
+  "title": "BaseEvent",
+  "type": "object",
+  "required": ["event_id", "event_type", "source", "timestamp", "cluster_id", "namespace", "severity"],
+  "properties": {
+    "event_id": { "type": "string", "format": "uuid" },
+    "event_type": { "type": "string", "enum": ["pod", "metric", "log", "topology", "incident", "anomaly", "correlation", "ai_result"] },
+    "source": { "type": "string" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "cluster_id": { "type": "string" },
+    "namespace": { "type": "string" },
+    "severity": { "type": "string", "enum": ["debug", "info", "warning", "error", "critical"] },
+    "labels": { "type": "object", "additionalProperties": { "type": "string" } },
+    "payload": { "type": "object" },
+    "correlation_id": { "type": ["string", "null"] },
+    "incident_id": { "type": ["string", "null"] },
+    "trace_id": { "type": ["string", "null"] }
+  },
+  "additionalProperties": false
+}

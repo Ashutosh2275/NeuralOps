@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sentinelops-workers
+  namespace: sentinelops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sentinelops-workers
+  template:
+    metadata:
+      labels:
+        app: sentinelops-workers
+    spec:
+      serviceAccountName: sentinelops-collector
+      containers:
+        - name: workers
+          image: sentinelops-backend:latest
+          command: ["python", "-m", "sentinelops.workers.runner"]
+          envFrom:
+            - configMapRef:
+                name: sentinelops-config
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"

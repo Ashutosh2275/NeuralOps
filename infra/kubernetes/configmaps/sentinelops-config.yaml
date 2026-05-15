@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sentinelops-config
+  namespace: sentinelops
+data:
+  APP_ENV: "production"
+  K8S_IN_CLUSTER: "true"
+  POSTGRES_HOST: "postgres.sentinelops.svc.cluster.local"
+  REDIS_HOST: "redis.sentinelops.svc.cluster.local"
+  PROMETHEUS_URL: "http://prometheus.monitoring.svc.cluster.local:9090"
+  LOKI_URL: "http://loki.monitoring.svc.cluster.local:3100"
+  OLLAMA_BASE_URL: "http://ollama.sentinelops.svc.cluster.local:11434"
+  OLLAMA_MODEL: "llama3.2"

@@ -1,0 +1,27 @@
+groups:
+  - name: sentinelops_anomalies
+    rules:
+      - alert: HighPodCPU
+        expr: sum(rate(container_cpu_usage_seconds_total{pod!=""}[5m])) by (pod, namespace) * 100 > 85
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU on pod {{ $labels.pod }}"
+
+      - alert: HighPodMemory
+        expr: |
+          sum(container_memory_working_set_bytes{pod!=""}) by (pod, namespace)
+          / sum(container_spec_memory_limit_bytes{pod!=""}) by (pod, namespace) * 100 > 90
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory on pod {{ $labels.pod }}"
+
+      - alert: PodCrashLooping
+        expr: increase(kube_pod_container_status_restarts_total[15m]) > 3
+        labels:
+          severity: critical
+        annotations:
+          summary: "Pod {{ $labels.pod }} is crash looping"
