@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import LiveTopology from "../components/topology/LiveTopology";
+import AdvancedTopologyVisualization from "../components/topology/AdvancedTopologyVisualization";
 import CascadingFailureVisualizer from "../components/topology/CascadingFailureVisualizer";
 import { api, TopologyGraph, CascadingFailure } from "../lib/api";
 import { useWebSocket } from "../hooks/useWebSocket";
@@ -10,6 +11,11 @@ export default function Topology() {
   const [cascadingFailure, setCascadingFailure] = useState<CascadingFailure | null>(null);
   const [cascadingNodes, setCascadingNodes] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [showAdvancedView, setShowAdvancedView] = useState(false);
+  const [showPressure, setShowPressure] = useState(true);
+  const [showHealth, setShowHealth] = useState(true);
+  const [showEdgeWeights, setShowEdgeWeights] = useState(true);
+  const [rootCauseNode, setRootCauseNode] = useState<string | null>(null);
   const { connected } = useWebSocket((e) => {
     if (e.type === "topology") {
       setTopology(e.payload as unknown as TopologyGraph);
@@ -19,6 +25,9 @@ export default function Topology() {
       const affectedNodeIds = new Set<string>();
       cascade.chain?.forEach((item: any) => {
         affectedNodeIds.add(item.service);
+        if (!rootCauseNode && item.root_cause) {
+          setRootCauseNode(item.service);
+        }
       });
       setCascadingNodes(affectedNodeIds);
     }
@@ -43,6 +52,8 @@ export default function Topology() {
         .catch(() => setCascadingFailure(null));
     }
   }, [selectedNode]);
+
+  const blastRadiusArray = Array.from(cascadingNodes);
 
   return (
     <div className="space-y-6">
@@ -71,17 +82,84 @@ export default function Topology() {
         </div>
       </div>
 
+      {/* Visualization Controls */}
+      {!loading && topology && topology.nodes.length > 0 && (
+        <div className="bg-sentinel-900 border border-sentinel-700 rounded-lg p-4">
+          <div className="flex gap-4 items-center flex-wrap">
+            <button
+              onClick={() => setShowAdvancedView(!showAdvancedView)}
+              className={`px-4 py-2 rounded text-sm transition-colors ${
+                showAdvancedView
+                  ? "bg-blue-600 text-white"
+                  : "bg-sentinel-700 text-gray-400 hover:bg-sentinel-600"
+              }`}
+            >
+              {showAdvancedView ? "📊 Advanced View" : "📈 Standard View"}
+            </button>
+
+            {showAdvancedView && (
+              <>
+                <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer hover:text-white">
+                  <input
+                    type="checkbox"
+                    checked={showPressure}
+                    onChange={(e) => setShowPressure(e.target.checked)}
+                    className="cursor-pointer"
+                  />
+                  Resource Pressure
+                </label>
+                <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer hover:text-white">
+                  <input
+                    type="checkbox"
+                    checked={showHealth}
+                    onChange={(e) => setShowHealth(e.target.checked)}
+                    className="cursor-pointer"
+                  />
+                  Health Indicators
+                </label>
+                <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer hover:text-white">
+                  <input
+                    type="checkbox"
+                    checked={showEdgeWeights}
+                    onChange={(e) => setShowEdgeWeights(e.target.checked)}
+                    className="cursor-pointer"
+                  />
+                  Edge Weights
+                </label>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Main Visualization */}
       {loading ? (
         <div className="bg-sentinel-900 border border-sentinel-700 rounded-lg p-8 text-center text-gray-500">
           Loading topology...
         </div>
       ) : topology && topology.nodes.length > 0 ? (
-        <LiveTopology
-          graph={topology}
-          cascadingFailures={cascadingNodes}
-          selectedNode={selectedNode || undefined}
-          onNodeSelect={setSelectedNode}
-        />
+        <div className="bg-sentinel-900 border border-sentinel-700 rounded-lg p-4">
+          {showAdvancedView ? (
+            <AdvancedTopologyVisualization
+              graph={topology}
+              width={1000}
+              height={500}
+              blastRadiusNodes={blastRadiusArray}
+              rootCause={rootCauseNode || undefined}
+              showPressure={showPressure}
+              showHealth={showHealth}
+              showEdgeWeights={showEdgeWeights}
+              animateUpdates={true}
+            />
+          ) : (
+            <LiveTopology
+              graph={topology}
+              cascadingFailures={cascadingNodes}
+              selectedNode={selectedNode || undefined}
+              onNodeSelect={setSelectedNode}
+            />
+          )}
+        </div>
       ) : (
         <div className="bg-sentinel-900 border border-sentinel-700 rounded-lg p-12 text-center text-gray-500">
           No topology data yet. Deploy the demo e-commerce stack and start collectors.
@@ -105,3 +183,4 @@ export default function Topology() {
     </div>
   );
 }
+
