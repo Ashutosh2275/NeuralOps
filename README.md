@@ -8,7 +8,7 @@ ABB Hackathon Theme 2 — Beyond Monitoring: AI Agents for Real-Time Pod Resourc
 
 ```
 ┌─────────────┐     ┌──────────────┐     ┌─────────────────┐
-│ K8s Cluster │────▶│ Event        │────▶│ Redis Streams   │
+│ K8s Cluster │────▶│ Event        │────▶│ Redis Streams  │
 │ + Prom/Loki │     │ Collector    │     │ Event Bus       │
 └─────────────┘     └──────────────┘     └────────┬────────┘
                                                    │
