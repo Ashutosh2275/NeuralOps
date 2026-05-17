@@ -5,7 +5,7 @@ import Incidents from "./pages/Incidents";
 import IncidentDetail from "./pages/IncidentDetail";
 import Topology from "./pages/Topology";
 import NLPAssistant from "./pages/NLPAssistant";
-import Replay from "./pages/Replay";
+import CinematicReplay from "./pages/CinematicReplay";
 import EnterpriseCommandCenter from "./pages/EnterpriseCommandCenter";
 
 export default function App() {
@@ -17,7 +17,7 @@ export default function App() {
         <Route path="/incidents/:id" element={<IncidentDetail />} />
         <Route path="/topology" element={<Topology />} />
         <Route path="/nlp" element={<NLPAssistant />} />
-        <Route path="/replay/:id" element={<Replay />} />
+        <Route path="/replay/:id" element={<CinematicReplay />} />
         <Route path="/command-center" element={<EnterpriseCommandCenter />} />
       </Routes>
     </Layout>
