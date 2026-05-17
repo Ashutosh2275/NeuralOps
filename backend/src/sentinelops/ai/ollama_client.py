@@ -56,10 +56,13 @@ class OllamaClient:
                         "model": model,
                         "prompt": full_prompt,
                         "stream": False,
+                        "keep_alive": -1,
                         "options": {
                             "num_predict": min(max_tokens, 2048),
                             "num_ctx": max_context,
                             "temperature": temperature,
+                            "num_gpu": 99,
+                            "use_mmap": True,
                         },
                     },
                 )

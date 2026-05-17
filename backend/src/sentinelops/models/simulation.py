@@ -36,6 +36,7 @@ class SimulationSeverity(str, Enum):
 
 class SimulatedIncident(Base):
     __tablename__ = "simulated_incidents"
+    __table_args__ = {'extend_existing': True}
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
     cluster_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey("clusters.id"), index=True)
@@ -65,6 +66,7 @@ class SimulatedIncident(Base):
 
 class RemediationAction(Base):
     __tablename__ = "remediation_actions"
+    __table_args__ = {'extend_existing': True}
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
     simulation_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey("simulated_incidents.id"), index=True)
@@ -89,6 +91,7 @@ class RemediationAction(Base):
 
 class InfrastructureScore(Base):
     __tablename__ = "infrastructure_scores"
+    __table_args__ = {'extend_existing': True}
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
     cluster_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey("clusters.id"), index=True)
@@ -114,6 +117,7 @@ class InfrastructureScore(Base):
 
 class BlastRadiusEvent(Base):
     __tablename__ = "blast_radius_events"
+    __table_args__ = {'extend_existing': True}
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
     simulation_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey("simulated_incidents.id"), index=True)
@@ -134,6 +138,7 @@ class BlastRadiusEvent(Base):
 
 class ReplaySession(Base):
     __tablename__ = "replay_sessions"
+    __table_args__ = {'extend_existing': True}
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
     incident_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey("incidents.id"), index=True)
@@ -150,6 +155,7 @@ class ReplaySession(Base):
 
 class RecoveryTimeline(Base):
     __tablename__ = "recovery_timelines"
+    __table_args__ = {'extend_existing': True}
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
     incident_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey("incidents.id"), index=True)

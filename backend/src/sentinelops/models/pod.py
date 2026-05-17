@@ -10,6 +10,7 @@ from sentinelops.core.database import Base
 
 class Pod(Base):
     __tablename__ = "pods"
+    __table_args__ = {'extend_existing': True}
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
     cluster_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey("clusters.id"))
@@ -32,6 +33,7 @@ class Pod(Base):
 
 class PodMetric(Base):
     __tablename__ = "pod_metrics"
+    __table_args__ = {'extend_existing': True}
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
     pod_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey("pods.id"), index=True)

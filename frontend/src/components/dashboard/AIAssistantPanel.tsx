@@ -12,7 +12,7 @@ export default function AIAssistantPanel({ wsEvents }: Props) {
   const nplEvents = wsEvents.filter((e) => e.type === "ai_insight" && e.payload?.agent === "npl_assistant");
 
   // Add new messages from events
-  nplEvents.forEach((event) => {
+  nplEvents.forEach((event: any) => {
     const content = event.payload?.findings?.[0] || event.payload?.reasoning || "";
     if (content && !messages.find((m) => m.content === content)) {
       setMessages((prev) => [...prev, { role: "assistant", content, timestamp: Date.now() }]);

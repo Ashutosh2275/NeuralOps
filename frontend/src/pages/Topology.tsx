@@ -1,21 +1,16 @@
 import { useEffect, useState } from "react";
-import LiveTopology from "../components/topology/LiveTopology";
 import AdvancedTopologyVisualization from "../components/topology/AdvancedTopologyVisualization";
-import CascadingFailureVisualizer from "../components/topology/CascadingFailureVisualizer";
-import { api, TopologyGraph, CascadingFailure } from "../lib/api";
+import { api, TopologyGraph } from "../lib/api";
 import { useWebSocket } from "../hooks/useWebSocket";
+import { Network, Activity, ShieldAlert, Cpu } from "lucide-react";
+import { motion } from "framer-motion";
 
 export default function Topology() {
   const [topology, setTopology] = useState<TopologyGraph | null>(null);
-  const [selectedNode, setSelectedNode] = useState<string | null>(null);
-  const [cascadingFailure, setCascadingFailure] = useState<CascadingFailure | null>(null);
   const [cascadingNodes, setCascadingNodes] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
-  const [showAdvancedView, setShowAdvancedView] = useState(false);
-  const [showPressure, setShowPressure] = useState(true);
-  const [showHealth, setShowHealth] = useState(true);
-  const [showEdgeWeights, setShowEdgeWeights] = useState(true);
   const [rootCauseNode, setRootCauseNode] = useState<string | null>(null);
+  
   const { connected } = useWebSocket((e) => {
     if (e.type === "topology") {
       setTopology(e.payload as unknown as TopologyGraph);
@@ -41,146 +36,81 @@ export default function Topology() {
       .finally(() => setLoading(false));
   }, []);
 
-  useEffect(() => {
-    if (!selectedNode) return;
-
-    const [namespace, kind, pod] = selectedNode.split("/");
-    if (kind === "Pod" && pod) {
-      api
-        .cascadingFailure(namespace, pod)
-        .then(setCascadingFailure)
-        .catch(() => setCascadingFailure(null));
-    }
-  }, [selectedNode]);
-
   const blastRadiusArray = Array.from(cascadingNodes);
 
   return (
-    <div className="space-y-6">
-      <header className="flex justify-between items-center">
-        <div>
-          <h2 className="font-display text-2xl font-bold">Topology Intelligence</h2>
-          <p className="text-gray-500 text-sm">Live dependency graph · Cascading failures · Health propagation</p>
-        </div>
-        <span className={`text-xs px-2 py-1 rounded ${connected ? "bg-green-900 text-green-300" : "bg-red-900"}`}>
-          {connected ? "Live" : "Offline"}
-        </span>
-      </header>
-
-      <div className="grid grid-cols-3 gap-4">
-        <div className="bg-sentinel-900 border border-sentinel-700 rounded-lg p-4">
-          <p className="text-xs text-gray-500">Topology Nodes</p>
-          <p className="text-3xl font-bold mt-1">{topology?.node_count ?? 0}</p>
-        </div>
-        <div className="bg-sentinel-900 border border-sentinel-700 rounded-lg p-4">
-          <p className="text-xs text-gray-500">Dependencies</p>
-          <p className="text-3xl font-bold mt-1">{topology?.edge_count ?? 0}</p>
-        </div>
-        <div className="bg-sentinel-900 border border-sentinel-700 rounded-lg p-4">
-          <p className="text-xs text-gray-500">Cascading Events</p>
-          <p className="text-3xl font-bold mt-1 text-red-400">{cascadingNodes.size}</p>
-        </div>
-      </div>
-
-      {/* Visualization Controls */}
-      {!loading && topology && topology.nodes.length > 0 && (
-        <div className="bg-sentinel-900 border border-sentinel-700 rounded-lg p-4">
-          <div className="flex gap-4 items-center flex-wrap">
-            <button
-              onClick={() => setShowAdvancedView(!showAdvancedView)}
-              className={`px-4 py-2 rounded text-sm transition-colors ${
-                showAdvancedView
-                  ? "bg-blue-600 text-white"
-                  : "bg-sentinel-700 text-gray-400 hover:bg-sentinel-600"
-              }`}
-            >
-              {showAdvancedView ? "📊 Advanced View" : "📈 Standard View"}
-            </button>
-
-            {showAdvancedView && (
-              <>
-                <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer hover:text-white">
-                  <input
-                    type="checkbox"
-                    checked={showPressure}
-                    onChange={(e) => setShowPressure(e.target.checked)}
-                    className="cursor-pointer"
-                  />
-                  Resource Pressure
-                </label>
-                <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer hover:text-white">
-                  <input
-                    type="checkbox"
-                    checked={showHealth}
-                    onChange={(e) => setShowHealth(e.target.checked)}
-                    className="cursor-pointer"
-                  />
-                  Health Indicators
-                </label>
-                <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer hover:text-white">
-                  <input
-                    type="checkbox"
-                    checked={showEdgeWeights}
-                    onChange={(e) => setShowEdgeWeights(e.target.checked)}
-                    className="cursor-pointer"
-                  />
-                  Edge Weights
-                </label>
-              </>
-            )}
+    <div className="h-full flex flex-col relative">
+      <header className="flex justify-between items-end mb-6">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-sentinel-accent/10 border border-sentinel-accent/30 rounded-lg flex items-center justify-center glow-border-accent">
+            <Network size={24} className="text-sentinel-accent animate-pulse-slow" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-display font-bold text-white tracking-tight uppercase glow-text-accent">
+              Neural Topology
+            </h1>
+            <p className="text-sm text-gray-400 font-sans tracking-widest uppercase mt-1">
+              Live Infrastructure Graph
+            </p>
           </div>
         </div>
-      )}
+        <div className="flex items-center gap-4 glass-panel px-4 py-2 rounded-lg">
+          <span className={`flex items-center gap-2 text-xs font-sans tracking-widest uppercase ${connected ? 'text-sentinel-success' : 'text-sentinel-danger'}`}>
+            <span className={`inline-block w-2 h-2 rounded-full ${connected ? 'bg-sentinel-success shadow-[0_0_8px_#10b981] animate-pulse' : 'bg-sentinel-danger shadow-[0_0_8px_#ef4444]'}`} />
+            {connected ? 'REALTIME SYNC' : 'OFFLINE'}
+          </span>
+        </div>
+      </header>
 
-      {/* Main Visualization */}
-      {loading ? (
-        <div className="bg-sentinel-900 border border-sentinel-700 rounded-lg p-8 text-center text-gray-500">
-          Loading topology...
-        </div>
-      ) : topology && topology.nodes.length > 0 ? (
-        <div className="bg-sentinel-900 border border-sentinel-700 rounded-lg p-4">
-          {showAdvancedView ? (
-            <AdvancedTopologyVisualization
-              graph={topology}
-              width={1000}
-              height={500}
-              blastRadiusNodes={blastRadiusArray}
-              rootCause={rootCauseNode || undefined}
-              showPressure={showPressure}
-              showHealth={showHealth}
-              showEdgeWeights={showEdgeWeights}
-              animateUpdates={true}
-            />
-          ) : (
-            <LiveTopology
-              graph={topology}
-              cascadingFailures={cascadingNodes}
-              selectedNode={selectedNode || undefined}
-              onNodeSelect={setSelectedNode}
-            />
-          )}
-        </div>
-      ) : (
-        <div className="bg-sentinel-900 border border-sentinel-700 rounded-lg p-12 text-center text-gray-500">
-          No topology data yet. Deploy the demo e-commerce stack and start collectors.
-        </div>
-      )}
+      {/* KPI Overlays */}
+      <div className="grid grid-cols-4 gap-4 mb-4">
+        {[
+          { label: "Active Nodes", value: topology?.node_count || 0, icon: <Cpu size={16} />, color: "text-sentinel-accent" },
+          { label: "Neural Connections", value: topology?.edge_count || 0, icon: <Network size={16} />, color: "text-blue-400" },
+          { label: "Blast Radius", value: cascadingNodes.size, icon: <ShieldAlert size={16} />, color: "text-red-400 glow-text-danger" },
+          { label: "System Health", value: "99.9%", icon: <Activity size={16} />, color: "text-sentinel-success" },
+        ].map((kpi, i) => (
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.1 }}
+            key={i} 
+            className="glass-panel p-3 rounded-xl flex items-center gap-4 border-l-4"
+            style={{ borderLeftColor: 'var(--sentinel-accent)' }}
+          >
+            <div className={`p-2 rounded-lg bg-black/40 ${kpi.color}`}>{kpi.icon}</div>
+            <div>
+              <div className="text-[10px] text-gray-500 font-display uppercase tracking-widest">{kpi.label}</div>
+              <div className={`text-xl font-bold font-sans ${kpi.color}`}>{kpi.value}</div>
+            </div>
+          </motion.div>
+        ))}
+      </div>
 
-      {cascadingFailure && cascadingFailure.cascade && (
-        <CascadingFailureVisualizer
-          chain={cascadingFailure.cascade.chain}
-          affectedCount={cascadingFailure.cascade.affected_count}
-          propagationDepth={cascadingFailure.cascade.propagation_depth}
-          escalationFactor={cascadingFailure.cascade.escalation_factor}
-        />
-      )}
-
-      {selectedNode && !cascadingFailure && (
-        <div className="bg-sentinel-900 border border-sentinel-700 rounded-lg p-4 text-center text-gray-400">
-          <p>No cascading failures detected from {selectedNode}</p>
-        </div>
-      )}
+      <div className="flex-1 relative rounded-xl overflow-hidden glass-panel border border-sentinel-700/50">
+        {loading ? (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="flex flex-col items-center gap-4">
+               <div className="w-12 h-12 rounded-full border-t-2 border-r-2 border-sentinel-accent animate-spin" />
+               <span className="text-sentinel-accent font-mono text-sm tracking-widest uppercase animate-pulse">Initializing D3 Physics Engine...</span>
+            </div>
+          </div>
+        ) : topology && topology.nodes.length > 0 ? (
+          <AdvancedTopologyVisualization
+            graph={topology}
+            blastRadiusNodes={blastRadiusArray}
+            rootCause={rootCauseNode || undefined}
+            showPressure={true}
+            showHealth={true}
+            showEdgeWeights={true}
+            animateUpdates={true}
+          />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center text-gray-500 font-mono text-sm">
+            No topology data available.
+          </div>
+        )}
+      </div>
     </div>
   );
 }
-

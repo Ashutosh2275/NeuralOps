@@ -4,11 +4,12 @@ from uuid import UUID
 
 from sentinelops.simulator.incident_simulator import IncidentSimulator, SimulationConfig, IncidentType, SimulationSeverity
 from sentinelops.self_healing.engine import SelfHealingEngine
+from sentinelops.services.incident_generator import create_incident_from_scenario
 from sentinelops.core.logging import get_logger
 
 log = get_logger(__name__)
 
-router = APIRouter(prefix="/api/v1/demo", tags=["demo"])
+router = APIRouter(prefix="/demo", tags=["demo"])
 
 _simulator: IncidentSimulator = None
 _healing_engine: SelfHealingEngine = None
@@ -169,6 +170,8 @@ async def trigger_demo_scenario(scenario_name: str, namespace: str = "demo"):
         )
         sim_id = await simulator.start_simulation(config)
         simulation_ids.append(sim_id)
+
+    await create_incident_from_scenario(scenario_name)
 
     return {
         "status": "success",

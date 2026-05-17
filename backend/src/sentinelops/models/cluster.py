@@ -10,6 +10,7 @@ from sentinelops.core.database import Base
 
 class Cluster(Base):
     __tablename__ = "clusters"
+    __table_args__ = {'extend_existing': True}
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
     name: Mapped[str] = mapped_column(String(128), unique=True, nullable=False)

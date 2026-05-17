@@ -10,6 +10,7 @@ from sentinelops.core.database import Base
 
 class Service(Base):
     __tablename__ = "services"
+    __table_args__ = {'extend_existing': True}
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
     cluster_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), index=True)

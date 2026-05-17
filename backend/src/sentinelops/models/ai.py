@@ -10,6 +10,7 @@ from sentinelops.core.database import Base
 
 class AIInsight(Base):
     __tablename__ = "ai_insights"
+    __table_args__ = {'extend_existing': True}
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
     incident_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey("incidents.id"), index=True)
@@ -25,6 +26,7 @@ class AIInsight(Base):
 
 class AIReasoningLog(Base):
     __tablename__ = "ai_reasoning_logs"
+    __table_args__ = {'extend_existing': True}
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
     incident_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey("incidents.id"), index=True)
@@ -41,6 +43,7 @@ class AIReasoningLog(Base):
 
 class AIRecommendation(Base):
     __tablename__ = "ai_recommendations"
+    __table_args__ = {'extend_existing': True}
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
     incident_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey("incidents.id"), index=True)
@@ -59,6 +62,7 @@ class AIRecommendation(Base):
 
 class IncidentSummary(Base):
     __tablename__ = "incident_summaries"
+    __table_args__ = {'extend_existing': True}
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
     incident_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey("incidents.id"), index=True)
@@ -73,6 +77,7 @@ class IncidentSummary(Base):
 
 class InfrastructureMemory(Base):
     __tablename__ = "infrastructure_memory"
+    __table_args__ = {'extend_existing': True}
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
     cluster_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), index=True)
@@ -86,6 +91,7 @@ class InfrastructureMemory(Base):
 
 class AnomalyPattern(Base):
     __tablename__ = "anomaly_patterns"
+    __table_args__ = {'extend_existing': True}
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
     cluster_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), index=True)

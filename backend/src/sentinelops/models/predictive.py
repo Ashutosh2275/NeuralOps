@@ -10,6 +10,7 @@ from sentinelops.core.database import Base
 
 class IncidentForecast(Base):
     __tablename__ = "incident_forecasts"
+    __table_args__ = {'extend_existing': True}
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
     cluster_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey("clusters.id"), index=True)
@@ -35,6 +36,7 @@ class IncidentForecast(Base):
 
 class IncidentAncestry(Base):
     __tablename__ = "incident_ancestry"
+    __table_args__ = {'extend_existing': True}
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
     incident_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey("incidents.id"), index=True)
@@ -52,6 +54,7 @@ class IncidentAncestry(Base):
 
 class ServiceHealthScore(Base):
     __tablename__ = "service_health_scores"
+    __table_args__ = {'extend_existing': True}
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
     cluster_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey("clusters.id"), index=True)
@@ -74,6 +77,7 @@ class ServiceHealthScore(Base):
 
 class K8sResourceIntelligence(Base):
     __tablename__ = "k8s_resource_intelligence"
+    __table_args__ = {'extend_existing': True}
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
     cluster_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey("clusters.id"), index=True)
@@ -93,6 +97,7 @@ class K8sResourceIntelligence(Base):
 
 class InfrastructureTimeline(Base):
     __tablename__ = "infrastructure_timelines"
+    __table_args__ = {'extend_existing': True}
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
     cluster_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey("clusters.id"), index=True)
@@ -114,6 +119,7 @@ class InfrastructureTimeline(Base):
 
 class AIConfidenceValidation(Base):
     __tablename__ = "ai_confidence_validations"
+    __table_args__ = {'extend_existing': True}
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
     incident_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey("incidents.id"), index=True)
@@ -135,6 +141,7 @@ class AIConfidenceValidation(Base):
 
 class RemediationOrchestration(Base):
     __tablename__ = "remediation_orchestrations"
+    __table_args__ = {'extend_existing': True}
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
     incident_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey("incidents.id"), index=True)
@@ -154,6 +161,7 @@ class RemediationOrchestration(Base):
 
 class ExecutiveMetrics(Base):
     __tablename__ = "executive_metrics"
+    __table_args__ = {'extend_existing': True}
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
     cluster_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey("clusters.id"), index=True)

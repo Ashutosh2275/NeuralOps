@@ -7,6 +7,7 @@ interface HealthMetrics {
   cluster_health: number;
   namespace_health: number;
   service_health: number;
+  dependency_health: number;
   incident_risk_score: number;
   recovery_readiness_score: number;
   cascading_failure_probability: number;

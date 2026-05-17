@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
-import { TopologyGraph, TopologyNode, TopologyEdge } from "../lib/api";
+import { TopologyGraph, TopologyNode, TopologyEdge } from "../../lib/api";
 
 interface LiveTopologyProps {
   graph: TopologyGraph | null;
@@ -9,7 +9,7 @@ interface LiveTopologyProps {
   onNodeSelect?: (nodeId: string) => void;
 }
 
-export default function LiveTopology({
+function LiveTopology({
   graph,
   cascadingFailures = new Set(),
   selectedNode,
@@ -26,8 +26,8 @@ export default function LiveTopology({
 
     // Create simulation
     const simulation = d3
-      .forceSimulation<TopologyNode>(graph.nodes)
-      .force("link", d3.forceLink<TopologyNode, TopologyEdge>(graph.edges).id((d) => d.id).distance(100))
+      .forceSimulation(graph.nodes as any)
+      .force("link", d3.forceLink(graph.edges as any).id((d: any) => d.id).distance(100))
       .force("charge", d3.forceManyBody().strength(-300))
       .force("center", d3.forceCenter(width / 2, height / 2))
       .force("collision", d3.forceCollide().radius(40));
@@ -44,7 +44,7 @@ export default function LiveTopology({
       .data(["healthy", "warning", "critical"])
       .enter()
       .append("marker")
-      .attr("id", (d) => `arrow-${d}`)
+      .attr("id", (d: any) => `arrow-${d}`)
       .attr("markerWidth", 10)
       .attr("markerHeight", 10)
       .attr("refX", 25)
@@ -52,7 +52,7 @@ export default function LiveTopology({
       .attr("orient", "auto")
       .append("path")
       .attr("d", "M0,0 L10,5 L0,10")
-      .attr("fill", (d) => {
+      .attr("fill", (d: any) => {
         if (d === "critical") return "#ef4444";
         if (d === "warning") return "#eab308";
         return "#10b981";
@@ -64,13 +64,13 @@ export default function LiveTopology({
       .data(graph.edges)
       .enter()
       .append("line")
-      .attr("stroke", (d) => {
+      .attr("stroke", (d: any) => {
         if (d.health === "critical") return "#ef4444";
         if (d.health === "warning") return "#eab308";
         return "#64748b";
       })
       .attr("stroke-width", 2)
-      .attr("marker-end", (d) => `url(#arrow-${d.health || "healthy"})`)
+      .attr("marker-end", (d: any) => `url(#arrow-${d.health || "healthy"})`)
       .attr("opacity", 0.6);
 
     // Nodes
@@ -80,20 +80,20 @@ export default function LiveTopology({
       .enter()
       .append("circle")
       .attr("r", 25)
-      .attr("fill", (d) => {
+      .attr("fill", (d: any) => {
         if (cascadingFailures.has(d.id)) return "#dc2626";
         if (d.health === "critical") return "#ef4444";
         if (d.health === "warning") return "#eab308";
         return "#10b981";
       })
-      .attr("stroke", (d) => (selectedNode === d.id ? "#ffffff" : "none"))
+      .attr("stroke", (d: any) => (selectedNode === d.id ? "#ffffff" : "none"))
       .attr("stroke-width", 2)
       .attr("cursor", "pointer")
-      .on("click", (_, d) => {
+      .on("click", (_, d: any) => {
         onNodeSelect?.(d.id);
         setHighlightedNodes(new Set([d.id]));
       })
-      .on("mouseover", (_, d) => {
+      .on("mouseover", (_, d: any) => {
         // Highlight connected nodes
         const connected = new Set<string>();
         connected.add(d.id);
@@ -108,17 +108,17 @@ export default function LiveTopology({
       })
       .call(
         d3
-          .drag<SVGCircleElement, TopologyNode>()
-          .on("start", (event, d) => {
+          .drag<SVGCircleElement, any>()
+          .on("start", (event: any, d: any) => {
             if (!event.active) simulation.alphaTarget(0.3).restart();
             d.fx = d.x;
             d.fy = d.y;
           })
-          .on("drag", (event, d) => {
+          .on("drag", (event: any, d: any) => {
             d.fx = event.x;
             d.fy = event.y;
           })
-          .on("end", (event, d) => {
+          .on("end", (event: any, d: any) => {
             if (!event.active) simulation.alphaTarget(0);
             d.fx = null;
             d.fy = null;
@@ -136,19 +136,19 @@ export default function LiveTopology({
       .attr("font-size", "12px")
       .attr("fill", "#ffffff")
       .attr("font-weight", "bold")
-      .text((d) => d.name || d.id.split("/").pop() || "?");
+      .text((d: any) => d.name || d.id.split("/").pop() || "?");
 
     // Update positions on tick
     simulation.on("tick", () => {
       links
-        .attr("x1", (d) => (d.source as TopologyNode).x || 0)
-        .attr("y1", (d) => (d.source as TopologyNode).y || 0)
-        .attr("x2", (d) => (d.target as TopologyNode).x || 0)
-        .attr("y2", (d) => (d.target as TopologyNode).y || 0);
+        .attr("x1", (d: any) => (d.source as any).x || 0)
+        .attr("y1", (d: any) => (d.source as any).y || 0)
+        .attr("x2", (d: any) => (d.target as any).x || 0)
+        .attr("y2", (d: any) => (d.target as any).y || 0);
 
-      nodes.attr("cx", (d) => d.x || 0).attr("cy", (d) => d.y || 0);
+      nodes.attr("cx", (d: any) => d.x || 0).attr("cy", (d: any) => d.y || 0);
 
-      labels.attr("x", (d) => d.x || 0).attr("y", (d) => d.y || 0);
+      labels.attr("x", (d: any) => d.x || 0).attr("y", (d: any) => d.y || 0);
     });
   }, [graph, cascadingFailures, selectedNode, onNodeSelect]);
 
@@ -158,3 +158,4 @@ export default function LiveTopology({
     </div>
   );
 }
+export default React.memo(LiveTopology);

@@ -10,6 +10,7 @@ from sentinelops.core.database import Base
 
 class Incident(Base):
     __tablename__ = "incidents"
+    __table_args__ = {'extend_existing': True}
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
     cluster_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey("clusters.id"))
@@ -32,6 +33,7 @@ class Incident(Base):
 
 class IncidentTimeline(Base):
     __tablename__ = "incident_timeline"
+    __table_args__ = {'extend_existing': True}
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
     incident_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey("incidents.id"), index=True)
@@ -48,6 +50,7 @@ class IncidentTimeline(Base):
 
 class IncidentEvent(Base):
     __tablename__ = "incident_events"
+    __table_args__ = {'extend_existing': True}
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
     incident_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey("incidents.id"), index=True)

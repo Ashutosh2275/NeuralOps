@@ -29,6 +29,11 @@ export function useWebSocket(onMessage?: (event: WSEvent) => void) {
       try {
         const event = JSON.parse(msg.data) as WSEvent;
         if (event.type === "pong") return;
+        if (event.type === "batch") {
+          const batchedEvents = event.payload.events as WSEvent[];
+          batchedEvents.forEach((e) => handleMessage(e));
+          return;
+        }
         handleMessage(event);
       } catch {
         /* ignore */

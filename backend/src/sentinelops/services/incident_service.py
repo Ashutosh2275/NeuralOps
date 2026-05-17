@@ -3,6 +3,7 @@ from datetime import datetime
 from uuid import UUID, uuid4
 
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from sentinelops.core.logging import get_logger
@@ -35,7 +36,11 @@ class IncidentService:
         return incident
 
     async def get(self, incident_id: UUID) -> Incident | None:
-        result = await self._session.execute(select(Incident).where(Incident.id == incident_id))
+        result = await self._session.execute(
+            select(Incident)
+            .options(selectinload(Incident.timeline))
+            .where(Incident.id == incident_id)
+        )
         return result.scalar_one_or_none()
 
     async def list_open(self, limit: int = 50) -> list[Incident]:

@@ -57,12 +57,12 @@ export default function DependencyGraph({ graph, width = 800, height = 500 }: Pr
 
     simulation.on("tick", () => {
       link
-        .attr("x1", (d) => (d.source as d3.SimulationNodeDatum).x ?? 0)
-        .attr("y1", (d) => (d.source as d3.SimulationNodeDatum).y ?? 0)
-        .attr("x2", (d) => (d.target as d3.SimulationNodeDatum).x ?? 0)
-        .attr("y2", (d) => (d.target as d3.SimulationNodeDatum).y ?? 0);
-      node.attr("cx", (d) => d.x ?? 0).attr("cy", (d) => d.y ?? 0);
-      label.attr("x", (d) => d.x ?? 0).attr("y", (d) => d.y ?? 0);
+        .attr("x1", (d: any) => d.source.x ?? 0)
+        .attr("y1", (d: any) => d.source.y ?? 0)
+        .attr("x2", (d: any) => d.target.x ?? 0)
+        .attr("y2", (d: any) => d.target.y ?? 0);
+      node.attr("cx", (d: any) => d.x ?? 0).attr("cy", (d: any) => d.y ?? 0);
+      label.attr("x", (d: any) => d.x ?? 0).attr("y", (d: any) => d.y ?? 0);
     });
 
     return () => {

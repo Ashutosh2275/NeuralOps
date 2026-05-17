@@ -10,6 +10,7 @@ from sentinelops.core.database import Base
 
 class TopologyVersion(Base):
     __tablename__ = "topology_versions"
+    __table_args__ = {'extend_existing': True}
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
     cluster_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), index=True)
@@ -24,6 +25,7 @@ class TopologyVersion(Base):
 
 class CorrelationGroup(Base):
     __tablename__ = "correlation_groups"
+    __table_args__ = {'extend_existing': True}
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
     incident_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), index=True)
@@ -40,6 +42,7 @@ class CorrelationGroup(Base):
 
 class AIInsight(Base):
     __tablename__ = "ai_insights"
+    __table_args__ = {'extend_existing': True}
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
     incident_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey("incidents.id"), index=True)
@@ -55,6 +58,7 @@ class AIInsight(Base):
 
 class ReplayFrame(Base):
     __tablename__ = "replay_frames"
+    __table_args__ = {'extend_existing': True}
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
     incident_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey("incidents.id"), index=True)
@@ -67,6 +71,7 @@ class ReplayFrame(Base):
 
 class ReplayEvent(Base):
     __tablename__ = "replay_events"
+    __table_args__ = {'extend_existing': True}
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
     incident_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey("incidents.id"), index=True)

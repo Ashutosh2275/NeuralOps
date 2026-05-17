@@ -109,4 +109,9 @@ export const api = {
     }),
   ingestionStatus: () => request<{ streams: Record<string, number> }>("/api/v1/ingestion/status"),
   triggerIngestion: () => request<{ published: number }>("/api/v1/ingestion/trigger", { method: "POST" }),
+  triggerScenario: (scenario: string) =>
+    request<{ status: string; scenario: string; simulation_ids: string[]; incident_count: number }>(
+      `/api/v1/demo/scenario/${scenario}`,
+      { method: "POST" }
+    ),
 };

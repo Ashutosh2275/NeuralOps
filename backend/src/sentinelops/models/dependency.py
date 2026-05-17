@@ -10,6 +10,7 @@ from sentinelops.core.database import Base
 
 class DependencyEdge(Base):
     __tablename__ = "dependency_edges"
+    __table_args__ = {'extend_existing': True}
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
     cluster_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), index=True)
@@ -28,6 +29,7 @@ class DependencyEdge(Base):
 
 class TopologySnapshot(Base):
     __tablename__ = "topology_snapshots"
+    __table_args__ = {'extend_existing': True}
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
     cluster_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), index=True)

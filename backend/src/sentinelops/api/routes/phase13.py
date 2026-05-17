@@ -13,12 +13,12 @@ from sentinelops.engines.infrastructure_memory_engine import infrastructure_memo
 from sentinelops.engines.consensus_engine import consensus_engine, AgentVote
 from sentinelops.engines.advanced_remediation_orchestrator import advanced_remediation_orchestrator
 from sentinelops.engines.advanced_k8s_intelligence_engine import advanced_k8s_intelligence
-from sentinelops.services.topology_service import topology_service
+from sentinelops.services.topology_service import TopologyService
 from sentinelops.services.incident_service import IncidentService
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v1/phase13", tags=["Phase 13: Predictive Operations"])
+router = APIRouter(prefix="/phase13", tags=["Phase 13: Predictive Operations"])
 
 
 # ===== PREDICTIVE FAILURE ENDPOINTS =====
@@ -31,7 +31,8 @@ async def forecast_failures(
     """Forecast infrastructure failures for next 24 hours"""
     try:
         incident_service = IncidentService(session)
-        topology = await topology_service.get_topology_graph(cluster_id)
+        topology_service = TopologyService(session)
+        topology = await topology_service.get_graph(cluster_id)
 
         # Get recent incident history
         incidents = await incident_service.get_recent_incidents(cluster_id, days=30)
@@ -186,7 +187,8 @@ async def compute_consensus(
 ):
     """Compute consensus from collected votes"""
     try:
-        topology = await topology_service.get_topology_graph(UUID("00000000-0000-0000-0000-000000000000"))
+        topology_service = TopologyService(session)
+        topology = await topology_service.get_graph(UUID("00000000-0000-0000-0000-000000000000"))
 
         result = await consensus_engine.compute_consensus(
             incident_id=incident_id,
@@ -217,7 +219,8 @@ async def create_remediation_workflow(
 ):
     """Create remediation workflow"""
     try:
-        topology = await topology_service.get_topology_graph(
+        topology_service = TopologyService(session)
+        topology = await topology_service.get_graph(
             UUID(workflow_data.get("cluster_id", "00000000-0000-0000-0000-000000000000"))
         )
 

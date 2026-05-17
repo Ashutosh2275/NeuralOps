@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useWebSocket } from "@/hooks/useWebSocket";
+import { useWebSocket } from "../hooks/useWebSocket";
 
 interface PredictedFailure {
   incident_type: string;

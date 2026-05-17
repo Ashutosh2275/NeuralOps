@@ -15,8 +15,43 @@ class WebSocketHub:
     def __init__(self) -> None:
         self._connections: set[WebSocket] = set()
         self._lock = asyncio.Lock()
+        self._batch_queue = asyncio.Queue()
+        self._batch_task = None
+
+    async def _batch_worker(self):
+        while True:
+            events = []
+            try:
+                # Wait for at least one event
+                event = await self._batch_queue.get()
+                events.append(event)
+                # Drain the queue of any other pending events
+                while not self._batch_queue.empty():
+                    events.append(self._batch_queue.get_nowait())
+                
+                if events:
+                    if len(events) == 1:
+                        message = json.dumps({"type": events[0][0], "payload": events[0][1]})
+                    else:
+                        message = json.dumps({"type": "batch", "payload": {"events": [{"type": e[0], "payload": e[1]} for e in events]}})
+                    
+                    dead = []
+                    async with self._lock:
+                        conns = list(self._connections)
+                    for ws in conns:
+                        try:
+                            await ws.send_text(message)
+                        except Exception:
+                            dead.append(ws)
+                    for ws in dead:
+                        await self.disconnect(ws)
+            except Exception as e:
+                log.error(f"batch_worker_error: {e}")
+            await asyncio.sleep(0.05) # 50ms batch window
 
     async def connect(self, websocket: WebSocket) -> None:
+        if self._batch_task is None:
+            self._batch_task = asyncio.create_task(self._batch_worker())
         await websocket.accept()
         async with self._lock:
             self._connections.add(websocket)
@@ -28,18 +63,8 @@ class WebSocketHub:
         log.info("ws_client_disconnected", total=len(self._connections))
 
     async def broadcast(self, event_type: str, payload: dict[str, Any]) -> None:
-        """Broadcast an event to all connected clients."""
-        message = json.dumps({"type": event_type, "payload": payload})
-        dead: list[WebSocket] = []
-        async with self._lock:
-            connections = list(self._connections)
-        for ws in connections:
-            try:
-                await ws.send_text(message)
-            except Exception:
-                dead.append(ws)
-        for ws in dead:
-            await self.disconnect(ws)
+        """Broadcast an event to all connected clients via batch queue."""
+        await self._batch_queue.put((event_type, payload))
 
     async def broadcast_topology_update(self, topology_data: dict) -> None:
         """Broadcast topology graph update."""

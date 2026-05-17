@@ -111,3 +111,32 @@ async def get_health_propagation(
         "total_affected": len(propagations),
     }
 
+@router.post("/seed")
+async def seed_topology_graph(
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """Seed the database with a 500-node simulated topology."""
+    service = TopologyService(session)
+    nodes = []
+    edges = []
+    core_services = ["api-gateway", "payment-service", "auth-service", "catalog-service", "inventory-service", "database", "redis-cache"]
+    for name in core_services:
+        nodes.append({"id": f"default:Service:{name}", "namespace": "default", "kind": "Service", "name": name, "health": "healthy"})
+    for i in range(500):
+        svc = core_services[i % len(core_services)]
+        pod_name = f"{svc}-{i}"
+        nodes.append({"id": f"default:Pod:{pod_name}", "namespace": "default", "kind": "Pod", "name": pod_name, "health": "healthy"})
+        edges.append({"source": f"default:Pod:{pod_name}", "target": f"default:Service:{svc}", "edge_type": "belongs_to", "confidence": 1.0})
+    edges.extend([
+        {"source": "default:Service:api-gateway", "target": "default:Service:auth-service", "edge_type": "depends_on", "confidence": 0.9},
+        {"source": "default:Service:api-gateway", "target": "default:Service:payment-service", "edge_type": "depends_on", "confidence": 0.9},
+        {"source": "default:Service:api-gateway", "target": "default:Service:catalog-service", "edge_type": "depends_on", "confidence": 0.9},
+        {"source": "default:Service:payment-service", "target": "default:Service:database", "edge_type": "depends_on", "confidence": 0.9},
+        {"source": "default:Service:catalog-service", "target": "default:Service:redis-cache", "edge_type": "depends_on", "confidence": 0.9},
+        {"source": "default:Service:catalog-service", "target": "default:Service:database", "edge_type": "depends_on", "confidence": 0.9},
+        {"source": "default:Service:inventory-service", "target": "default:Service:database", "edge_type": "depends_on", "confidence": 0.9},
+    ])
+    snapshot_json = {"nodes": nodes, "edges": edges}
+    await service.create_version_snapshot(DEFAULT_CLUSTER_ID, snapshot_json)
+    await session.commit()
+    return {"status": "success", "nodes": len(nodes), "edges": len(edges)}

@@ -1,8 +1,10 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { api } from "../lib/api";
-import DependencyGraph from "../components/topology/DependencyGraph";
+import AdvancedTopologyVisualization from "../components/topology/AdvancedTopologyVisualization";
 import type { TopologyGraph } from "../lib/api";
+import { motion, AnimatePresence } from "framer-motion";
+import { Play, Pause, SkipBack, SkipForward, FastForward, Clock, Cpu, GitBranch, Terminal, ShieldAlert } from "lucide-react";
 
 interface ReplayBranch {
   branch_id: string;
@@ -66,7 +68,6 @@ export const CinematicReplay: React.FC = () => {
     }
   }, [id]);
 
-  // Enhanced playback with variable speed
   useEffect(() => {
     if (playbackIntervalRef.current) clearInterval(playbackIntervalRef.current);
 
@@ -97,546 +98,248 @@ export const CinematicReplay: React.FC = () => {
   const remediationActions = current?.remediation_overlays || [];
   const branches = current?.alternative_branches || [];
 
-  const handleRewind = () => {
-    setFrameIdx(0);
-    setPlaying(false);
-  };
-
-  const handlePrevFrame = () => {
-    setFrameIdx((idx) => Math.max(0, idx - 1));
-    setPlaying(false);
-  };
-
-  const handleNextFrame = () => {
-    setFrameIdx((idx) => Math.min(frames.length - 1, idx + 1));
-    setPlaying(false);
-  };
-
-  const handleBranchExploration = (branch: ReplayBranch) => {
-    setSelectedBranch(branch);
-    setFrameIdx(branch.frame_index);
-    setShowBranches(true);
-  };
-
-  const handleExitBranch = () => {
-    setSelectedBranch(null);
-    setShowBranches(false);
-  };
-
   return (
-    <div className="cinematic-replay p-6 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 min-h-screen">
-      <style>{`
-        .cinematic-replay {
-          font-family: "JetBrains Mono", monospace;
-        }
-
-        .replay-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 24px;
-          padding: 16px;
-          background: rgba(30, 41, 59, 0.6);
-          border: 1px solid rgba(148, 163, 184, 0.2);
-          border-radius: 8px;
-        }
-
-        .replay-title {
-          font-size: 24px;
-          font-weight: bold;
-          color: #60a5fa;
-          margin: 0;
-        }
-
-        .replay-frame-counter {
-          font-size: 12px;
-          color: #94a3b8;
-          text-transform: uppercase;
-          letter-spacing: 1px;
-        }
-
-        .replay-controls {
-          display: flex;
-          gap: 8px;
-          align-items: center;
-          margin-bottom: 16px;
-          padding: 12px;
-          background: rgba(15, 23, 42, 0.8);
-          border: 1px solid rgba(148, 163, 184, 0.1);
-          border-radius: 8px;
-        }
-
-        .control-button {
-          padding: 8px 12px;
-          background: rgba(59, 130, 246, 0.2);
-          border: 1px solid rgba(59, 130, 246, 0.5);
-          color: #60a5fa;
-          border-radius: 4px;
-          cursor: pointer;
-          font-size: 12px;
-          font-weight: 600;
-          transition: all 0.2s;
-        }
-
-        .control-button:hover {
-          background: rgba(59, 130, 246, 0.3);
-          border-color: rgba(59, 130, 246, 0.8);
-        }
-
-        .control-button.active {
-          background: rgba(59, 130, 246, 0.5);
-          border-color: rgba(59, 130, 246, 1);
-        }
-
-        .timeline-scrubber {
-          flex: 1;
-          height: 6px;
-          background: rgba(100, 116, 139, 0.3);
-          border-radius: 3px;
-          cursor: pointer;
-          position: relative;
-        }
-
-        .timeline-scrubber input {
-          width: 100%;
-          height: 100%;
-          cursor: pointer;
-          -webkit-appearance: none;
-          appearance: none;
-          background: transparent;
-          padding: 0;
-        }
-
-        .timeline-scrubber input::-webkit-slider-thumb {
-          -webkit-appearance: none;
-          appearance: none;
-          width: 12px;
-          height: 12px;
-          background: #3b82f6;
-          border-radius: 50%;
-          cursor: pointer;
-          box-shadow: 0 0 8px rgba(59, 130, 246, 0.6);
-        }
-
-        .timeline-scrubber input::-moz-range-thumb {
-          width: 12px;
-          height: 12px;
-          background: #3b82f6;
-          border-radius: 50%;
-          cursor: pointer;
-          border: none;
-          box-shadow: 0 0 8px rgba(59, 130, 246, 0.6);
-        }
-
-        .playback-speed-control {
-          display: flex;
-          gap: 8px;
-          align-items: center;
-        }
-
-        .playback-speed-control label {
-          font-size: 11px;
-          color: #94a3b8;
-          text-transform: uppercase;
-        }
-
-        .playback-speed-control select {
-          padding: 6px;
-          background: rgba(30, 41, 59, 0.8);
-          border: 1px solid rgba(148, 163, 184, 0.2);
-          color: #94a3b8;
-          border-radius: 4px;
-          font-size: 11px;
-          cursor: pointer;
-        }
-
-        .replay-display {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 16px;
-          margin-bottom: 16px;
-        }
-
-        .panel {
-          background: rgba(15, 23, 42, 0.8);
-          border: 1px solid rgba(148, 163, 184, 0.1);
-          border-radius: 8px;
-          padding: 16px;
-          min-height: 300px;
-          display: flex;
-          flex-direction: column;
-        }
-
-        .panel-title {
-          font-size: 12px;
-          color: #60a5fa;
-          text-transform: uppercase;
-          font-weight: 600;
-          margin-bottom: 12px;
-          letter-spacing: 1px;
-        }
-
-        .events-list {
-          flex: 1;
-          overflow-y: auto;
-          space-y: 8px;
-        }
-
-        .event-item {
-          padding: 8px;
-          background: rgba(30, 41, 59, 0.5);
-          border-left: 2px solid #3b82f6;
-          border-radius: 2px;
-          font-size: 11px;
-          color: #cbd5e1;
-          margin-bottom: 4px;
-          white-space: pre-wrap;
-          word-break: break-word;
-        }
-
-        .reasoning-overlay {
-          background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1));
-          border: 1px solid rgba(59, 130, 246, 0.3);
-          border-radius: 6px;
-          padding: 12px;
-          margin-bottom: 12px;
-        }
-
-        .reasoning-label {
-          font-size: 11px;
-          color: #60a5fa;
-          text-transform: uppercase;
-          font-weight: 600;
-          margin-bottom: 6px;
-        }
-
-        .reasoning-content {
-          font-size: 12px;
-          color: #cbd5e1;
-          line-height: 1.4;
-        }
-
-        .confidence-score {
-          display: inline-block;
-          padding: 2px 8px;
-          background: rgba(59, 130, 246, 0.2);
-          border-radius: 3px;
-          font-size: 11px;
-          color: #60a5fa;
-          margin-top: 6px;
-        }
-
-        .remediation-action {
-          background: rgba(34, 197, 94, 0.1);
-          border: 1px solid rgba(34, 197, 94, 0.3);
-          border-radius: 6px;
-          padding: 10px;
-          margin-bottom: 10px;
-          font-size: 11px;
-        }
-
-        .action-status {
-          display: inline-block;
-          padding: 2px 6px;
-          border-radius: 2px;
-          font-size: 10px;
-          font-weight: 600;
-          margin-top: 4px;
-        }
-
-        .action-status.proposed {
-          background: rgba(59, 130, 246, 0.3);
-          color: #60a5fa;
-        }
-
-        .action-status.executing {
-          background: rgba(251, 146, 60, 0.3);
-          color: #fb923c;
-          animation: pulse 2s infinite;
-        }
-
-        .action-status.completed {
-          background: rgba(34, 197, 94, 0.3);
-          color: #22c55e;
-        }
-
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.6; }
-        }
-
-        .branch-explorer {
-          background: rgba(139, 92, 246, 0.05);
-          border: 1px solid rgba(139, 92, 246, 0.3);
-          border-radius: 8px;
-          padding: 12px;
-          margin-bottom: 16px;
-        }
-
-        .branch-item {
-          padding: 10px;
-          background: rgba(30, 41, 59, 0.5);
-          border: 1px solid rgba(139, 92, 246, 0.2);
-          border-radius: 4px;
-          margin-bottom: 8px;
-          cursor: pointer;
-          transition: all 0.2s;
-        }
-
-        .branch-item:hover {
-          background: rgba(139, 92, 246, 0.15);
-          border-color: rgba(139, 92, 246, 0.5);
-        }
-
-        .branch-item.selected {
-          background: rgba(139, 92, 246, 0.25);
-          border-color: rgba(139, 92, 246, 0.8);
-        }
-
-        .timeline-full {
-          background: rgba(15, 23, 42, 0.8);
-          border: 1px solid rgba(148, 163, 184, 0.1);
-          border-radius: 8px;
-          padding: 16px;
-        }
-
-        .timeline-events {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-          gap: 8px;
-          max-height: 200px;
-          overflow-y: auto;
-        }
-
-        .timeline-marker {
-          padding: 8px;
-          background: rgba(30, 41, 59, 0.5);
-          border: 1px solid rgba(148, 163, 184, 0.2);
-          border-radius: 4px;
-          font-size: 10px;
-          color: #94a3b8;
-          text-align: center;
-          cursor: pointer;
-          transition: all 0.2s;
-        }
-
-        .timeline-marker:hover {
-          border-color: rgba(59, 130, 246, 0.5);
-          background: rgba(59, 130, 246, 0.1);
-        }
-      `}</style>
-
-      {/* Header */}
-      <div className="replay-header">
-        <div>
-          <h1 className="replay-title">🎬 Cinematic Incident Replay</h1>
-          <p className="replay-frame-counter">Incident {id}</p>
-        </div>
-        <div className="text-right">
-          <div className="replay-frame-counter">
-            Frame {frameIdx + 1} / {frames.length}
+    <div className="h-full flex flex-col gap-6">
+      <header className="flex justify-between items-end">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-purple-500/10 border border-purple-500/30 rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(168,85,247,0.2)]">
+            <Clock size={24} className="text-purple-400" />
           </div>
-          {current?.timestamp && (
-            <div className="text-sm text-blue-400 mt-2">{current.timestamp}</div>
-          )}
-        </div>
-      </div>
-
-      {/* Playback Controls */}
-      <div className="replay-controls">
-        <button className="control-button" onClick={handleRewind} title="Rewind to start">
-          ⏮ Rewind
-        </button>
-        <button className="control-button" onClick={handlePrevFrame} title="Previous frame">
-          ⏪ Prev
-        </button>
-        <button
-          className={`control-button ${playing ? "active" : ""}`}
-          onClick={() => setPlaying(!playing)}
-          title="Play/Pause"
-        >
-          {playing ? "⏸ Pause" : "▶ Play"}
-        </button>
-        <button className="control-button" onClick={handleNextFrame} title="Next frame">
-          ⏩ Next
-        </button>
-
-        {/* Timeline Scrubber */}
-        <div style={{ flex: 1, display: "flex", alignItems: "center" }}>
-          <div className="timeline-scrubber">
-            <input
-              type="range"
-              min={0}
-              max={Math.max(frames.length - 1, 0)}
-              value={frameIdx}
-              onChange={(e) => {
-                setFrameIdx(Number(e.target.value));
-                setPlaying(false);
-              }}
-            />
+          <div>
+            <h1 className="text-3xl font-display font-bold text-white tracking-tight uppercase" style={{ textShadow: '0 0 10px rgba(168,85,247,0.5)' }}>
+              Cinematic Replay
+            </h1>
+            <p className="text-sm text-purple-400/70 font-sans tracking-widest uppercase mt-1">
+              Time-Series Incident Reconstruction
+            </p>
           </div>
         </div>
-
-        {/* Speed Control */}
-        <div className="playback-speed-control">
-          <label>Speed:</label>
-          <select value={playbackSpeed} onChange={(e) => setPlaybackSpeed(Number(e.target.value))}>
-            <option value={0.5}>0.5×</option>
-            <option value={1}>1×</option>
-            <option value={1.5}>1.5×</option>
-            <option value={2}>2×</option>
-          </select>
-        </div>
-
-        {/* Overlay Toggles */}
-        <button
-          className={`control-button ${showReasoningOverlay ? "active" : ""}`}
-          onClick={() => setShowReasoningOverlay(!showReasoningOverlay)}
-          title="Toggle AI reasoning overlay"
-        >
-          🤖 AI
-        </button>
-        <button
-          className={`control-button ${showRemediationOverlay ? "active" : ""}`}
-          onClick={() => setShowRemediationOverlay(!showRemediationOverlay)}
-          title="Toggle remediation overlay"
-        >
-          ⚙️ Fix
-        </button>
-        <button
-          className={`control-button ${showBranches ? "active" : ""}`}
-          onClick={() => setShowBranches(!showBranches)}
-          title="Toggle branch exploration"
-        >
-          🔀 Branch
-        </button>
-      </div>
-
-      {/* Main Display */}
-      <div className="replay-display">
-        {/* Events Panel */}
-        <div className="panel">
-          <div className="panel-title">📡 Events ({current?.event_count || 0})</div>
-          <div className="events-list">
-            {(current?.events ?? []).map((e: unknown, i: number) => (
-              <div key={i} className="event-item">
-                {typeof e === "string" ? e : JSON.stringify(e, null, 2)}
+        <div className="glass-panel px-6 py-2 rounded-lg flex gap-8 border-purple-500/30 text-right">
+           <div>
+              <div className="text-[10px] text-gray-500 font-display uppercase tracking-widest">Frame Record</div>
+              <div className="text-xl font-bold font-sans text-white">{frameIdx + 1} <span className="text-gray-500 text-sm">/ {frames.length || 1}</span></div>
+           </div>
+           {current?.timestamp && (
+              <div>
+                 <div className="text-[10px] text-gray-500 font-display uppercase tracking-widest">Temporal Index</div>
+                 <div className="text-lg font-mono text-purple-400">{current.timestamp}</div>
               </div>
-            ))}
-            {(!current?.events || current.events.length === 0) && (
-              <div style={{ color: "#64748b", fontSize: "11px" }}>No events at this frame</div>
-            )}
-          </div>
+           )}
         </div>
+      </header>
 
-        {/* Topology Panel */}
-        <div className="panel">
-          <div className="panel-title">🗺️ Topology State</div>
-          {topo && topo.nodes ? (
-            <DependencyGraph graph={topo as TopologyGraph} width={400} height={280} />
-          ) : (
-            <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#64748b" }}>
-              Topology state at frame {frameIdx + 1}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* AI Reasoning Overlay */}
-      {showReasoningOverlay && aiReasoning && (
-        <div className="panel" style={{ marginBottom: "16px" }}>
-          <div className="panel-title">🤖 AI Reasoning</div>
-          <div className="reasoning-overlay">
-            <div className="reasoning-label">Root Cause Analysis</div>
-            <div className="reasoning-content">{aiReasoning.root_cause}</div>
-            <div className="confidence-score">Confidence: {(aiReasoning.confidence * 100).toFixed(0)}%</div>
-          </div>
-
-          {aiReasoning.reasoning_chain && aiReasoning.reasoning_chain.length > 0 && (
-            <div style={{ marginTop: "12px" }}>
-              <div className="reasoning-label">Evidence Chain</div>
-              {aiReasoning.reasoning_chain.map((reason, idx) => (
-                <div key={idx} className="reasoning-content" style={{ marginBottom: "8px", paddingLeft: "8px", borderLeft: "2px solid #3b82f6" }}>
-                  {idx + 1}. {reason}
+      {/* Main Cinematic Grid */}
+      <div className="grid grid-cols-12 gap-6 flex-1 min-h-0">
+        
+        {/* Left Side: Topology & Reasoning */}
+        <div className="col-span-8 flex flex-col gap-6">
+           <motion.div 
+             initial={{ opacity: 0, scale: 0.98 }}
+             animate={{ opacity: 1, scale: 1 }}
+             className="glass-panel rounded-xl flex-1 relative overflow-hidden border border-purple-500/30 shadow-[0_0_20px_rgba(168,85,247,0.1)]"
+           >
+              <div className="absolute top-4 left-4 z-10 flex gap-2">
+                 <div className="glass-panel px-3 py-1.5 rounded-lg border border-purple-500/50 flex items-center gap-2">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-500"></span>
+                    </span>
+                    <span className="text-[10px] text-purple-400 font-display uppercase tracking-widest">Temporal Hologram</span>
+                 </div>
+              </div>
+              
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(168,85,247,0.05)_0%,transparent_70%)] pointer-events-none" />
+              
+              {topo && topo.nodes ? (
+                <AdvancedTopologyVisualization graph={topo} showPressure={true} showHealth={true} showEdgeWeights={false} animateUpdates={false} />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center text-purple-500/50 font-mono text-sm uppercase tracking-widest">
+                  Awaiting Telemetry Data...
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+              )}
+           </motion.div>
 
-      {/* Remediation Overlay */}
-      {showRemediationOverlay && remediationActions.length > 0 && (
-        <div className="panel" style={{ marginBottom: "16px" }}>
-          <div className="panel-title">⚙️ Remediation Actions</div>
-          {remediationActions.map((action, idx) => (
-            <div key={idx} className="remediation-action">
-              <div style={{ fontWeight: 600, color: "#22c55e" }}>{action.action}</div>
-              <div style={{ color: "#cbd5e1", marginTop: "4px", fontSize: "10px" }}>
-                Severity: <span style={{ color: action.severity === "critical" ? "#ef4444" : "#fb923c" }}>{action.severity}</span>
-              </div>
-              <div style={{ color: "#cbd5e1", marginTop: "4px", fontSize: "10px" }}>
-                Impact: {action.impact_estimate}
-              </div>
-              <div className={`action-status ${action.status}`}>{action.status.toUpperCase()}</div>
-            </div>
-          ))}
+           <AnimatePresence mode="popLayout">
+              {showReasoningOverlay && aiReasoning && (
+                 <motion.div 
+                   initial={{ opacity: 0, y: 20 }}
+                   animate={{ opacity: 1, y: 0 }}
+                   exit={{ opacity: 0, scale: 0.95 }}
+                   className="glass-panel rounded-xl p-5 border border-sentinel-accent/30 bg-sentinel-900/90 glow-border-accent"
+                 >
+                    <div className="flex justify-between items-start mb-4">
+                       <div className="flex items-center gap-2">
+                          <Cpu size={16} className="text-sentinel-accent" />
+                          <h3 className="text-xs font-display text-sentinel-accent uppercase tracking-widest">AI Root Cause Synthesis</h3>
+                       </div>
+                       <span className="text-xs font-mono text-sentinel-accent px-2 py-0.5 bg-sentinel-accent/20 rounded">
+                          CONF {Math.round(aiReasoning.confidence * 100)}%
+                       </span>
+                    </div>
+                    
+                    <p className="text-lg font-sans text-white mb-4 leading-relaxed">
+                       {aiReasoning.root_cause}
+                    </p>
+                    
+                    <div className="space-y-2">
+                       {aiReasoning.reasoning_chain?.map((reason, i) => (
+                          <motion.div 
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: i * 0.1 }}
+                            key={i} 
+                            className="flex gap-3 text-sm text-gray-300 font-sans"
+                          >
+                             <span className="text-sentinel-accent opacity-50 font-mono text-xs mt-0.5">{(i+1).toString().padStart(2, '0')}</span>
+                             <span>{reason}</span>
+                          </motion.div>
+                       ))}
+                    </div>
+                 </motion.div>
+              )}
+           </AnimatePresence>
         </div>
-      )}
 
-      {/* Branch Explorer */}
-      {showBranches && branches.length > 0 && (
-        <div className="branch-explorer">
-          <div className="panel-title">🔀 Alternative Branches</div>
-          <div style={{ marginBottom: "12px", fontSize: "11px", color: "#94a3b8" }}>
-            {branches.length} alternative remediation paths discovered
-          </div>
-          {branches.map((branch, idx) => (
-            <div
-              key={idx}
-              className={`branch-item ${selectedBranch?.branch_id === branch.branch_id ? "selected" : ""}`}
-              onClick={() => handleBranchExploration(branch)}
-            >
-              <div style={{ fontWeight: 600, color: "#a78bfa" }}>Path {idx + 1}: {branch.alternate_remediation}</div>
-              <div style={{ fontSize: "10px", color: "#cbd5e1", marginTop: "4px" }}>
-                Divergence: {branch.divergence_reason}
-              </div>
-              <div style={{ fontSize: "10px", color: "#cbd5e1", marginTop: "2px" }}>
-                Outcome: {branch.potential_outcome}
-              </div>
-              <div style={{ fontSize: "10px", marginTop: "4px" }}>
-                <span style={{ color: "#60a5fa" }}>Confidence: {(branch.confidence * 100).toFixed(0)}%</span>
-              </div>
-            </div>
-          ))}
-          {selectedBranch && (
-            <button
-              className="control-button"
-              onClick={handleExitBranch}
-              style={{ marginTop: "12px", width: "100%" }}
-            >
-              ✕ Exit Branch
-            </button>
-          )}
-        </div>
-      )}
+        {/* Right Side: Remediation & Events */}
+        <div className="col-span-4 flex flex-col gap-6 h-full">
+           <AnimatePresence>
+              {showRemediationOverlay && remediationActions.length > 0 && (
+                 <motion.div 
+                   initial={{ opacity: 0, x: 20 }}
+                   animate={{ opacity: 1, x: 0 }}
+                   className="glass-panel border-orange-500/30 rounded-xl p-5 shadow-[0_0_15px_rgba(249,115,22,0.1)]"
+                 >
+                    <div className="flex items-center gap-2 mb-4">
+                       <ShieldAlert size={16} className="text-orange-400" />
+                       <h3 className="text-xs font-display text-orange-400 uppercase tracking-widest">Autonomous Remediation</h3>
+                    </div>
+                    
+                    <div className="space-y-3">
+                       {remediationActions.map((action, i) => (
+                          <div key={i} className="bg-black/40 border border-orange-500/20 rounded-lg p-3">
+                             <div className="text-sm text-white font-sans font-medium mb-2">{action.action}</div>
+                             <div className="flex justify-between items-center text-[10px] font-mono uppercase tracking-widest">
+                                <span className={action.severity === 'critical' ? 'text-red-400' : 'text-orange-400'}>{action.severity}</span>
+                                <span className={`px-2 py-0.5 rounded ${action.status === 'executing' ? 'bg-orange-500/20 text-orange-400 animate-pulse' : action.status === 'completed' ? 'bg-green-500/20 text-green-400' : 'bg-gray-700/50 text-gray-400'}`}>
+                                   {action.status}
+                                </span>
+                             </div>
+                          </div>
+                       ))}
+                    </div>
+                 </motion.div>
+              )}
+           </AnimatePresence>
 
-      {/* Full Timeline */}
-      <div className="timeline-full">
-        <div className="panel-title">📅 Full Timeline ({timeline.length} events)</div>
-        <div className="timeline-events">
-          {(timeline as { timestamp?: string; event_type?: string; title?: string }[]).map((t, i) => (
-            <div
-              key={i}
-              className="timeline-marker"
-              onClick={() => setFrameIdx(i)}
-              title={`${t.timestamp} — ${t.event_type}`}
-            >
-              <div>{i + 1}</div>
-              <div style={{ fontSize: "9px", marginTop: "4px" }}>{t.event_type}</div>
-            </div>
-          ))}
+           <div className="glass-panel border-gray-700/50 rounded-xl p-5 flex-1 flex flex-col overflow-hidden">
+              <div className="flex items-center gap-2 mb-4">
+                 <Terminal size={16} className="text-gray-400" />
+                 <h3 className="text-xs font-display text-gray-400 uppercase tracking-widest">Event Telemetry</h3>
+              </div>
+              
+              <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-2">
+                 {(current?.events ?? []).map((e: any, i) => (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      key={i} 
+                      className="text-[10px] font-mono text-gray-400 bg-black/30 p-2 rounded border-l-2 border-gray-700 break-words"
+                    >
+                       {typeof e === 'string' ? e : JSON.stringify(e)}
+                    </motion.div>
+                 ))}
+                 {(!current?.events || current.events.length === 0) && (
+                    <div className="text-center text-gray-600 text-xs font-mono py-8">NO EVENTS RECORDED</div>
+                 )}
+              </div>
+           </div>
         </div>
+      </div>
+
+      {/* Control Bar */}
+      <div className="glass-panel rounded-xl p-4 flex flex-col gap-4">
+         <div className="flex items-center gap-4">
+            <span className="text-[10px] font-mono text-gray-500 w-12 text-right">START</span>
+            <div className="flex-1 relative h-10 group flex items-center">
+               <div className="absolute inset-x-0 h-1 bg-gray-700/50 rounded-full" />
+               <input
+                 type="range"
+                 min={0}
+                 max={Math.max(frames.length - 1, 0)}
+                 value={frameIdx}
+                 onChange={(e) => {
+                   setFrameIdx(Number(e.target.value));
+                   setPlaying(false);
+                 }}
+                 className="absolute inset-0 w-full opacity-0 cursor-pointer z-10"
+               />
+               <motion.div 
+                 className="absolute h-2 bg-purple-500 rounded-full shadow-[0_0_10px_rgba(168,85,247,0.8)] pointer-events-none"
+                 style={{ width: `${(frameIdx / Math.max(frames.length - 1, 1)) * 100}%` }}
+               />
+               <motion.div 
+                 className="absolute w-4 h-4 bg-white rounded-full shadow-[0_0_15px_rgba(255,255,255,1)] pointer-events-none -ml-2"
+                 style={{ left: `${(frameIdx / Math.max(frames.length - 1, 1)) * 100}%` }}
+               />
+            </div>
+            <span className="text-[10px] font-mono text-gray-500 w-12">END</span>
+         </div>
+
+         <div className="flex justify-between items-center px-4">
+            <div className="flex gap-2">
+               {[0.5, 1, 1.5, 2].map(speed => (
+                  <button
+                    key={speed}
+                    onClick={() => setPlaybackSpeed(speed)}
+                    className={`px-3 py-1 text-[10px] font-mono rounded ${playbackSpeed === speed ? 'bg-purple-500/20 text-purple-400 border border-purple-500/50' : 'text-gray-500 hover:text-gray-300'}`}
+                  >
+                     {speed}x
+                  </button>
+               ))}
+            </div>
+
+            <div className="flex gap-4">
+               <button onClick={() => { setFrameIdx(0); setPlaying(false); }} className="p-2 text-gray-400 hover:text-white transition-colors">
+                  <SkipBack size={20} />
+               </button>
+               <button onClick={() => { setFrameIdx(i => Math.max(0, i - 1)); setPlaying(false); }} className="p-2 text-gray-400 hover:text-white transition-colors">
+                  <FastForward size={20} className="rotate-180" />
+               </button>
+               <button 
+                 onClick={() => setPlaying(!playing)} 
+                 className="w-12 h-12 bg-purple-500 text-white rounded-full flex items-center justify-center hover:bg-purple-400 shadow-[0_0_20px_rgba(168,85,247,0.4)] transition-all"
+               >
+                  {playing ? <Pause size={24} /> : <Play size={24} className="ml-1" />}
+               </button>
+               <button onClick={() => { setFrameIdx(i => Math.min(frames.length - 1, i + 1)); setPlaying(false); }} className="p-2 text-gray-400 hover:text-white transition-colors">
+                  <FastForward size={20} />
+               </button>
+               <button onClick={() => { setFrameIdx(frames.length - 1); setPlaying(false); }} className="p-2 text-gray-400 hover:text-white transition-colors">
+                  <SkipForward size={20} />
+               </button>
+            </div>
+
+            <div className="flex gap-2">
+               <button 
+                  onClick={() => setShowReasoningOverlay(!showReasoningOverlay)}
+                  className={`px-3 py-1.5 text-[10px] font-mono rounded uppercase tracking-widest flex items-center gap-2 ${showReasoningOverlay ? 'bg-sentinel-accent/20 text-sentinel-accent border border-sentinel-accent/50' : 'text-gray-500 hover:text-gray-300'}`}
+               >
+                  <Cpu size={12} /> AI Trace
+               </button>
+               <button 
+                  onClick={() => setShowRemediationOverlay(!showRemediationOverlay)}
+                  className={`px-3 py-1.5 text-[10px] font-mono rounded uppercase tracking-widest flex items-center gap-2 ${showRemediationOverlay ? 'bg-orange-500/20 text-orange-400 border border-orange-500/50' : 'text-gray-500 hover:text-gray-300'}`}
+               >
+                  <ShieldAlert size={12} /> Actions
+               </button>
+               <button 
+                  onClick={() => setShowBranches(!showBranches)}
+                  className={`px-3 py-1.5 text-[10px] font-mono rounded uppercase tracking-widest flex items-center gap-2 ${showBranches ? 'bg-purple-500/20 text-purple-400 border border-purple-500/50' : 'text-gray-500 hover:text-gray-300'}`}
+               >
+                  <GitBranch size={12} /> Branches
+               </button>
+            </div>
+         </div>
       </div>
     </div>
   );
