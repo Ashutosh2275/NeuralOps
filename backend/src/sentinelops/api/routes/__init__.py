@@ -8,6 +8,7 @@ from sentinelops.api.routes.nlp import router as nlp_router
 from sentinelops.api.routes.topology import router as topology_router
 from sentinelops.api.routes.demo import router as demo_router
 from sentinelops.api.routes.phase13 import router as phase13_router
+from sentinelops.api.routes.predictive import router as predictive_router
 
 api_router = APIRouter()
 api_router.include_router(health_router, tags=["health"])
@@ -18,3 +19,4 @@ api_router.include_router(ingestion_router, prefix="/ingestion", tags=["ingestio
 api_router.include_router(intelligence_router, prefix="/intelligence", tags=["intelligence"])
 api_router.include_router(demo_router, tags=["demo"])
 api_router.include_router(phase13_router, tags=["phase13"])
+api_router.include_router(predictive_router, tags=["predictive"])

@@ -33,6 +33,16 @@ from sentinelops.models.simulation import (
     SimulationType,
     SimulationSeverity,
 )
+from sentinelops.models.predictive import (
+    IncidentForecast,
+    IncidentAncestry,
+    ServiceHealthScore,
+    K8sResourceIntelligence,
+    InfrastructureTimeline,
+    AIConfidenceValidation,
+    RemediationOrchestration,
+    ExecutiveMetrics,
+)
 
 __all__ = [
     "Cluster",
@@ -66,4 +76,12 @@ __all__ = [
     "RecoveryTimeline",
     "SimulationType",
     "SimulationSeverity",
+    "IncidentForecast",
+    "IncidentAncestry",
+    "ServiceHealthScore",
+    "K8sResourceIntelligence",
+    "InfrastructureTimeline",
+    "AIConfidenceValidation",
+    "RemediationOrchestration",
+    "ExecutiveMetrics",
 ]
