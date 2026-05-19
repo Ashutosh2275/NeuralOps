@@ -1,4 +1,8 @@
-import React, { useEffect, useRef, useState, memo } from "react";
+import os
+
+file_path = "frontend/src/components/topology/AdvancedTopologyVisualization.tsx"
+
+content = """import React, { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 import type { TopologyGraph } from "../../lib/api";
 import { motion, AnimatePresence } from "framer-motion";
@@ -428,3 +432,8 @@ export const AdvancedTopologyVisualization: React.FC<AdvancedTopologyProps> = ({
   );
 };
 export default memo(AdvancedTopologyVisualization); // Add memo to prevent useless React rerenders
+"""
+
+with open(file_path, "w", encoding="utf-8") as f:
+    f.write(content)
+print("File written successfully!")

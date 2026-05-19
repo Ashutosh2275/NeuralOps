@@ -1,10 +1,14 @@
-import React, { useEffect, useRef, memo } from "react";
-import * as d3 from "d3";
+import os
 
+file_path = "frontend/src/components/topology/CascadingFailureVisualizer.tsx"
+
+content = """import React, { useEffect, useRef, memo } from "react";
+import * as d3 from "d3";
+import type { BlastRadiusEvent, ReplayFrame } from "../../lib/api";
 
 interface Props {
-  cascadeEvents: any[];
-  frame?: any;
+  cascadeEvents: BlastRadiusEvent[];
+  frame?: ReplayFrame;
 }
 
 interface TopoNode extends d3.SimulationNodeDatum {
@@ -147,3 +151,8 @@ function CascadingFailureVisualizer({ cascadeEvents, frame }: Props) {
   );
 }
 export default memo(CascadingFailureVisualizer);
+"""
+
+with open(file_path, "w", encoding="utf-8") as f:
+    f.write(content)
+print("CascadingFailureVisualizer written successfully!")

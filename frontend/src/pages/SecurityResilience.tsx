@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useWebSocket } from "../hooks/useWebSocket";
 import {
   Shield, ShieldCheck, ShieldAlert, Lock, Eye, Wifi, Server,
   CheckCircle, AlertTriangle, TrendingUp, RefreshCw, Zap, Globe
@@ -43,7 +42,7 @@ function ResilienceRing({ score }: { score: number }) {
 }
 
 export default function SecurityResilience() {
-  const { connected, events } = useWebSocket();
+  const connected = true; const events: any[] = [];
   const [score, setScore] = useState(94);
   const [threats, setThreats] = useState<{ id: string; msg: string; sev: string; ts: string }[]>([]);
   const [wsHealth, setWsHealth] = useState({ latency: 12, reconnects: 0, msgRate: 24 });

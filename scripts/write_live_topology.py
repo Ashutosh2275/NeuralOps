@@ -1,42 +1,74 @@
-import React, { useEffect, useRef, memo } from "react";
-import * as d3 from "d3";
-import type { TopologyGraph } from "../../lib/api";
+import os
 
-interface Props {
-  graph: TopologyGraph;
-  width?: number;
-  height?: number;
-}
+file_path = "frontend/src/components/topology/LiveTopology.tsx"
+
+content = """import React, { useEffect, useRef, useState, memo } from "react";
+import * as d3 from "d3";
+import { TopologyGraph, TopologyNode, TopologyEdge } from "../../lib/api";
 
 interface TopoNode extends d3.SimulationNodeDatum {
   id: string;
   name?: string;
-  kind?: string;
   health?: "healthy" | "warning" | "critical" | string;
 }
 
 interface TopoLink extends d3.SimulationLinkDatum<TopoNode> {
   source: string | TopoNode;
   target: string | TopoNode;
+  health?: "healthy" | "warning" | "critical" | string;
 }
 
-function DependencyGraph({ graph, width = 800, height = 500 }: Props) {
+interface LiveTopologyProps {
+  graph: TopologyGraph | null;
+  cascadingFailures?: Set<string>;
+  selectedNode?: string;
+  onNodeSelect?: (nodeId: string) => void;
+}
+
+function LiveTopology({
+  graph,
+  cascadingFailures = new Set(),
+  selectedNode,
+  onNodeSelect,
+}: LiveTopologyProps) {
   const svgRef = useRef<SVGSVGElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   
   const simRef = useRef<d3.Simulation<TopoNode, TopoLink> | null>(null);
-  const linkGRef = useRef<d3.Selection<SVGGElement, unknown, null, undefined> | null>(null);
   const nodeGRef = useRef<d3.Selection<SVGGElement, unknown, null, undefined> | null>(null);
+  const linkGRef = useRef<d3.Selection<SVGGElement, unknown, null, undefined> | null>(null);
   const labelGRef = useRef<d3.Selection<SVGGElement, unknown, null, undefined> | null>(null);
 
+  const [highlightedNodes, setHighlightedNodes] = useState<Set<string>>(new Set());
+
+  // Init
   useEffect(() => {
-    if (!svgRef.current) return;
-    if (simRef.current) return;
-    
+    if (!svgRef.current || !containerRef.current) return;
+    if (simRef.current) return; // already initialized
+
+    const width = containerRef.current.clientWidth || 800;
+    const height = containerRef.current.clientHeight || 500;
+
     const svg = d3.select(svgRef.current);
     svg.selectAll("*").remove();
     svg.attr("viewBox", `0 0 ${width} ${height}`);
 
+    svg.append("defs").selectAll("marker")
+      .data(["healthy", "warning", "critical", "danger"])
+      .enter().append("marker")
+      .attr("id", d => `arrow-${d}`)
+      .attr("markerWidth", 10).attr("markerHeight", 10)
+      .attr("refX", 28).attr("refY", 5).attr("orient", "auto")
+      .append("path").attr("d", "M0,0 L10,5 L0,10")
+      .attr("fill", d => {
+        if (d === "critical" || d === "danger") return "#ef4444";
+        if (d === "warning") return "#eab308";
+        return "#10b981";
+      });
+
     const g = svg.append("g");
+    
+    // Zoom
     const zoom = d3.zoom<SVGSVGElement, unknown>().scaleExtent([0.1, 4])
       .on("zoom", (e) => g.attr("transform", e.transform));
     svg.call(zoom);
@@ -46,18 +78,18 @@ function DependencyGraph({ graph, width = 800, height = 500 }: Props) {
     labelGRef.current = g.append("g").attr("class", "labels");
 
     simRef.current = d3.forceSimulation<TopoNode>()
-      .force("link", d3.forceLink<TopoNode, TopoLink>().id(d => d.id).distance(80))
-      .force("charge", d3.forceManyBody().strength(-200))
+      .force("link", d3.forceLink<TopoNode, TopoLink>().id(d => d.id).distance(100))
+      .force("charge", d3.forceManyBody().strength(-300))
       .force("center", d3.forceCenter(width / 2, height / 2).strength(0.05))
-      .force("collision", d3.forceCollide().radius(30));
+      .force("collision", d3.forceCollide().radius(40));
 
     return () => {
       if (simRef.current) simRef.current.stop();
       simRef.current = null;
     };
-  }, [width, height]);
+  }, []);
 
-
+  // Update
   useEffect(() => {
     if (!graph || !graph.nodes || !simRef.current || !nodeGRef.current || !linkGRef.current || !labelGRef.current) return;
 
@@ -89,37 +121,51 @@ function DependencyGraph({ graph, width = 800, height = 500 }: Props) {
       .data(links, d => `${(d.source as any).id || d.source}-${(d.target as any).id || d.target}`);
       
     const linkEnter = linkSel.enter().append("line")
-      .attr("stroke", "#475569").attr("stroke-width", 1.5).attr("opacity", 0);
+      .attr("stroke-width", 2).attr("opacity", 0);
       
-    linkEnter.merge(linkSel).transition().duration(300).attr("opacity", 0.8);
+    linkEnter.merge(linkSel).transition().duration(300)
+      .attr("opacity", 0.6)
+      .attr("stroke", d => {
+        if (d.health === "critical") return "#ef4444";
+        if (d.health === "warning") return "#eab308";
+        return "#64748b";
+      })
+      .attr("marker-end", d => `url(#arrow-${d.health || "healthy"})`);
+      
     linkSel.exit().remove();
 
     // ── Nodes ──
     const nodeSel = nodeGRef.current.selectAll<SVGCircleElement, TopoNode>("circle").data(nodes, d => d.id);
+    
     const nodeEnter = nodeSel.enter().append("circle")
-      .attr("r", 20)
+      .attr("r", 25)
       .attr("cursor", "pointer")
       .call(d3.drag<SVGCircleElement, TopoNode>()
         .on("start", (e, d) => { if (!e.active) simRef.current!.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; })
         .on("drag",  (e, d) => { d.fx = e.x; d.fy = e.y; })
         .on("end",   (e, d) => { if (!e.active) simRef.current!.alphaTarget(0); d.fx = null; d.fy = null; })
-      );
+      )
+      .on("click", (_, d) => {
+        if (onNodeSelect) onNodeSelect(d.id);
+      });
 
     nodeEnter.merge(nodeSel).transition().duration(300)
       .attr("fill", d => {
-        if (d.kind === "Pod") return "#3b82f6";
-        if (d.kind === "Service") return "#8b5cf6";
-        return "#64748b";
+        if (cascadingFailures.has(d.id)) return "#dc2626";
+        if (d.health === "critical") return "#ef4444";
+        if (d.health === "warning") return "#eab308";
+        return "#10b981";
       })
-      .attr("stroke", "#0f172a")
+      .attr("stroke", d => selectedNode === d.id ? "#ffffff" : "none")
       .attr("stroke-width", 2);
       
     nodeSel.exit().remove();
 
     // ── Labels ──
     const labelSel = labelGRef.current.selectAll<SVGTextElement, TopoNode>("text").data(nodes, d => d.id);
+    
     labelSel.enter().append("text")
-      .attr("text-anchor", "middle").attr("dy", "0.3em").attr("font-size", "10px").attr("fill", "#f8fafc")
+      .attr("text-anchor", "middle").attr("dy", "0.3em").attr("font-size", "12px").attr("fill", "#ffffff").attr("font-weight", "bold")
       .style("pointer-events", "none")
       .merge(labelSel)
       .text(d => d.name || d.id.split("/").pop() || "?");
@@ -143,12 +189,18 @@ function DependencyGraph({ graph, width = 800, height = 500 }: Props) {
       }
     });
 
-  }, [graph]);
+  }, [graph, cascadingFailures, selectedNode, onNodeSelect]);
 
   return (
-    <div className="bg-sentinel-900 border border-sentinel-700 rounded-lg overflow-hidden w-full h-full min-h-[400px]">
+    <div ref={containerRef} className="bg-sentinel-900 border border-sentinel-700 rounded-lg overflow-hidden w-full h-[500px]">
       <svg ref={svgRef} className="w-full h-full" />
     </div>
   );
 }
-export default memo(DependencyGraph);
+
+export default memo(LiveTopology);
+"""
+
+with open(file_path, "w", encoding="utf-8") as f:
+    f.write(content)
+print("LiveTopology File written successfully!")

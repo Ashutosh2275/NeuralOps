@@ -59,10 +59,10 @@ export default function NLPAssistant() {
         </div>
         <div>
           <h1 className="text-3xl font-display font-bold text-white tracking-tight uppercase" style={{ textShadow: "0 0 15px rgba(168,85,247,0.5)" }}>
-            AI Assistant
+            AI Oracle
           </h1>
           <p className="text-sm text-purple-400/70 font-sans tracking-widest uppercase mt-1">
-            Ollama · Local Inference · RTX 3050 Ti
+            Infrastructure Intelligence · No Data Leaves Your System
           </p>
         </div>
       </header>
@@ -178,7 +178,7 @@ export default function NLPAssistant() {
             </motion.button>
           </div>
           <p className="text-center text-gray-700 text-[10px] font-mono uppercase tracking-widest mt-2">
-            Powered by Ollama · Fully Offline · No Data Leaves Your System
+            No data leaves your system · Air-gapped inference engine
           </p>
         </div>
       </div>

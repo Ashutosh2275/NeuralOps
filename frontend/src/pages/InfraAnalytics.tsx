@@ -81,14 +81,37 @@ export default function InfraAnalytics() {
   const [heatmap, setHeatmap] = useState<number[][]>([]);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    // Generate heatmap (rows=days, cols=hours)
-    const data: number[][] = Array.from({ length: HEATMAP_ROWS }, () =>
-      Array.from({ length: HEATMAP_COLS }, () => Math.random())
-    );
-    setHeatmap(data);
+  // Period-aware dataset profiles
+  const PERIOD_PROFILES: Record<string,{cpuBase:number;memBase:number;errBase:number;noise:number;heatBias:number}> = {
+    "1H":  { cpuBase:67, memBase:74, errBase:23,  noise:4,  heatBias:0.0  },
+    "6H":  { cpuBase:72, memBase:76, errBase:38,  noise:7,  heatBias:0.08 },
+    "24H": { cpuBase:61, memBase:71, errBase:29,  noise:10, heatBias:0.05 },
+    "7D":  { cpuBase:58, memBase:68, errBase:52,  noise:14, heatBias:0.12 },
+    "30D": { cpuBase:54, memBase:65, errBase:71,  noise:18, heatBias:0.18 },
+  };
 
-    // Periodically refresh metrics
+  const applyPeriod = (p: string) => {
+    const prof = PERIOD_PROFILES[p] ?? PERIOD_PROFILES["24H"];
+    setMetrics({
+      cpu:    { val: prof.cpuBase + (Math.random()-0.5)*10, delta: (Math.random()-0.4)*15, series: genSeries(prof.cpuBase, 30, prof.noise) },
+      mem:    { val: prof.memBase + (Math.random()-0.5)*8,  delta: (Math.random()-0.4)*10, series: genSeries(prof.memBase, 30, prof.noise * 0.6) },
+      net:    { val: 600 + Math.random()*600,               delta: (Math.random()-0.4)*20, series: genSeries(55, 30, prof.noise*1.4) },
+      errors: { val: prof.errBase + (Math.random()-0.3)*15, delta: (Math.random()-0.3)*30, series: genSeries(prof.errBase, 30, prof.noise*0.8) },
+    });
+    // Heatmap: busier during business hours (8-18), quieter nights; bias increases with time range
+    setHeatmap(Array.from({ length: HEATMAP_ROWS }, (_, row) =>
+      Array.from({ length: HEATMAP_COLS }, (_, col) => {
+        const isBusinessHour = col >= 8 && col <= 18;
+        const isWeekend = row >= 5;
+        const base = isBusinessHour ? 0.45 : 0.15;
+        const wkBonus = isWeekend ? -0.2 : 0;
+        return Math.max(0, Math.min(1, base + wkBonus + prof.heatBias + (Math.random()-0.5)*0.28));
+      })
+    ));
+  };
+
+  useEffect(() => {
+    applyPeriod(period);
     const t = setInterval(() => {
       setMetrics(prev => ({
         cpu:    { val: Math.max(10, Math.min(95, prev.cpu.val   + (Math.random()-0.48)*5)), delta: (Math.random()-0.4)*15, series: [...prev.cpu.series.slice(1),   Math.max(10,Math.min(95,prev.cpu.val+(Math.random()-0.5)*8))] },
@@ -99,6 +122,7 @@ export default function InfraAnalytics() {
     }, 3000);
     return () => clearInterval(t);
   }, []);
+
 
   const heatColor = (val: number): string => {
     if (val < 0.2) return "rgba(16,185,129,0.6)";
@@ -125,7 +149,7 @@ export default function InfraAnalytics() {
           {PERIODS.map(p => (
             <button
               key={p}
-              onClick={() => { setPeriod(p); setHeatmap(Array.from({ length: HEATMAP_ROWS }, () => Array.from({ length: HEATMAP_COLS }, () => Math.random()))); }}
+              onClick={() => { setPeriod(p); applyPeriod(p); }}
               className={`px-3 py-1.5 rounded-lg text-xs font-mono uppercase tracking-widest transition-all ${period === p ? "bg-sentinel-accent/20 border border-sentinel-accent/50 text-sentinel-accent" : "border border-sentinel-700/40 text-gray-500 hover:text-white hover:border-sentinel-700"}`}
             >
               {p}

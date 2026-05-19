@@ -1,4 +1,8 @@
-import React, { useEffect, useState, useMemo } from "react";
+import os
+
+file_path = "frontend/src/pages/IncidentCommandCenter.tsx"
+
+content = """import React, { useEffect, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePlatform, useReasoningLog } from "../contexts/PlatformContext";
 import {
@@ -58,21 +62,9 @@ function CognitiveStream() {
   const items = reasoning?.length > 0 ? reasoning : defaultReasoning;
 
   return (
-    <div 
-      style={{ 
-        flex: 1, 
-        overflowY: "auto", 
-        overflowX: "hidden",
-        maxHeight: "350px", // Constrains the length
-        display: "flex", 
-        flexDirection: "column", 
-        gap: 8, 
-        padding: "0 8px 0 4px",
-      }}
-      className="scrollbar-thin scrollbar-thumb-cyan-500/20 scrollbar-track-transparent"
-    >
+    <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 8, padding: "0 4px" }}>
       <AnimatePresence mode="popLayout">
-        {items.slice(0, 50).map((log: any) => {
+        {items.slice(0, 15).map((log: any) => {
           const c = log.kind === "critical" ? "#ef4444" : log.kind === "warn" ? "#f97316" : log.kind === "success" ? "#10b981" : "#22d3ee";
           return (
              <motion.div key={log.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
@@ -308,3 +300,8 @@ export default function IncidentCommandCenter() {
     </div>
   );
 }
+"""
+
+with open(file_path, "w", encoding="utf-8") as f:
+    f.write(content)
+print("IncidentCommandCenter rewritten with Enterprise aesthetics!")

@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../lib/api";
-import { useWebSocket } from "../hooks/useWebSocket";
 import AIInsightsPanel from "../components/dashboard/AIInsightsPanel";
 import RCAPanel from "../components/dashboard/RCAPanel";
 import RecommendationPanel from "../components/dashboard/RecommendationPanel";
@@ -28,8 +27,8 @@ export default function IncidentDetail() {
   const { id } = useParams<{ id: string }>();
   const [incident, setIncident] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
-  const { events } = useWebSocket();
-  const [insights, setInsights] = useState<any[]>([]);
+    const [insights, setInsights] = useState<any[]>([]);
+  const events: any[] = [];
   const [recommendations, setRecommendations] = useState<any[]>([]);
 
   useEffect(() => {
@@ -37,14 +36,14 @@ export default function IncidentDetail() {
   }, [id]);
 
   useEffect(() => {
-    const aiInsights = events.filter(e => e.type === "ai_insight").map(e => ({
+    const aiInsights = events.filter((e: any) => e.type === "ai_insight").map((e: any) => ({
       agent: e.payload?.agent || "unknown",
       findings: e.payload?.findings || [],
       confidence: e.payload?.confidence || 0,
       reasoning: e.payload?.reasoning || "",
     }));
     setInsights(aiInsights);
-    setRecommendations(events.filter(e => e.type === "recommendations").flatMap(e => e.payload || []));
+    setRecommendations(events.filter((e: any) => e.type === "recommendations").flatMap((e: any) => e.payload || []));
   }, [events]);
 
   if (loading) return (

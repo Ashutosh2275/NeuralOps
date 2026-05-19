@@ -1,15 +1,14 @@
 import { useState } from "react";
-import type { WSEvent } from "../../hooks/useWebSocket";
 
 interface Props {
-  wsEvents: WSEvent[];
+  wsEvents?: any[];
 }
 
 export default function AIAssistantPanel({ wsEvents }: Props) {
   const [messages, setMessages] = useState<Array<{ role: string; content: string; timestamp: number }>>([]);
 
   // Extract NLP assistant responses from WebSocket events
-  const nplEvents = wsEvents.filter((e) => e.type === "ai_insight" && e.payload?.agent === "npl_assistant");
+  const nplEvents = (wsEvents || []).filter((e) => e.type === "ai_insight" && e.payload?.agent === "npl_assistant");
 
   // Add new messages from events
   nplEvents.forEach((event: any) => {

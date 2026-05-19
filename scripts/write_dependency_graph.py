@@ -1,4 +1,8 @@
-import React, { useEffect, useRef, memo } from "react";
+import os
+
+file_path = "frontend/src/components/topology/DependencyGraph.tsx"
+
+content = """import React, { useEffect, useRef, memo } from "react";
 import * as d3 from "d3";
 import type { TopologyGraph } from "../../lib/api";
 
@@ -152,3 +156,8 @@ function DependencyGraph({ graph, width = 800, height = 500 }: Props) {
   );
 }
 export default memo(DependencyGraph);
+"""
+
+with open(file_path, "w", encoding="utf-8") as f:
+    f.write(content)
+print("DependencyGraph written successfully!")

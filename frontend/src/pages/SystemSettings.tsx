@@ -1,268 +1,235 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Settings, Palette, Wifi, Cpu, Film, Zap, Moon, Sun, Check, ChevronDown } from "lucide-react";
+import { useSettings, PlatformSettings } from "../contexts/SettingsContext";
+import {
+  Palette, Zap, Wifi, Brain, Film, RotateCcw, Save,
+  Check, ChevronRight, Monitor, Sliders, Cpu
+} from "lucide-react";
 
-interface ToggleProps { value: boolean; onChange: (v: boolean) => void; color?: string; }
-function Toggle({ value, onChange, color = "bg-sentinel-accent" }: ToggleProps) {
-  return (
-    <button
-      onClick={() => onChange(!value)}
-      className={`relative w-10 h-5 rounded-full transition-all duration-200 ${value ? color : "bg-sentinel-700"}`}
-    >
-      <motion.div
-        animate={{ x: value ? 20 : 2 }}
-        transition={{ type: "spring", stiffness: 500, damping: 30 }}
-        className="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow"
-      />
-    </button>
-  );
-}
+// ── Section definitions ─────────────────────────────────────────────────────
+type SectionId = "theme" | "performance" | "websocket" | "ai" | "replay";
 
-interface SliderProps { value: number; min: number; max: number; onChange: (v: number) => void; }
-function Slider({ value, min, max, onChange }: SliderProps) {
-  return (
-    <input
-      type="range" min={min} max={max} value={value}
-      onChange={e => onChange(Number(e.target.value))}
-      className="w-full h-1 rounded-full accent-sentinel-accent cursor-pointer"
-    />
-  );
-}
-
-const SECTIONS = [
-  { id: "theme",       label: "Theme & Visuals",     icon: <Palette className="w-4 h-4" /> },
-  { id: "performance", label: "Performance",          icon: <Zap className="w-4 h-4" /> },
-  { id: "ws",          label: "WebSocket",            icon: <Wifi className="w-4 h-4" /> },
-  { id: "ai",          label: "AI Settings",          icon: <Cpu className="w-4 h-4" /> },
-  { id: "replay",      label: "Replay & Demo",        icon: <Film className="w-4 h-4" /> },
+const SECTIONS: { id: SectionId; label: string; icon: React.ReactNode; color: string }[] = [
+  { id: "theme",       label: "Theme & Visuals",   icon: <Palette className="w-4 h-4" />,  color: "text-sentinel-accent" },
+  { id: "performance", label: "Performance",        icon: <Zap className="w-4 h-4" />,      color: "text-yellow-400"      },
+  { id: "websocket",   label: "WebSocket",          icon: <Wifi className="w-4 h-4" />,     color: "text-blue-400"        },
+  { id: "ai",          label: "AI Settings",        icon: <Brain className="w-4 h-4" />,    color: "text-purple-400"      },
+  { id: "replay",      label: "Replay & Demo",      icon: <Film className="w-4 h-4" />,     color: "text-orange-400"      },
 ];
 
+// ── Reusable controls ──────────────────────────────────────────────────────
+function Toggle({ value, onChange, label, sub }: { value: boolean; onChange: (v: boolean) => void; label: string; sub?: string }) {
+  return (
+    <div className="flex items-center justify-between py-3 border-b border-sentinel-700/20 last:border-0">
+      <div>
+        <p className="text-sm font-display text-white font-medium">{label}</p>
+        {sub && <p className="text-[10px] font-mono text-gray-600 mt-0.5">{sub}</p>}
+      </div>
+      <button
+        onClick={() => onChange(!value)}
+        className={`relative w-11 h-6 rounded-full transition-all duration-300 shrink-0 ${value ? "bg-sentinel-accent/80" : "bg-sentinel-800"}`}
+        style={{ boxShadow: value ? "0 0 12px rgba(34,211,238,0.4)" : "none" }}
+      >
+        <motion.div animate={{ x: value ? 22 : 2 }} transition={{ type: "spring", stiffness: 500, damping: 30 }}
+          className="absolute top-1 w-4 h-4 rounded-full bg-white shadow-md" />
+      </button>
+    </div>
+  );
+}
+
+function RangeSlider({ value, onChange, label, sub, min, max, unit }: {
+  value: number; onChange: (v: number) => void; label: string; sub?: string; min: number; max: number; unit?: string;
+}) {
+  return (
+    <div className="py-3 border-b border-sentinel-700/20 last:border-0">
+      <div className="flex items-center justify-between mb-2">
+        <div>
+          <p className="text-sm font-display text-white font-medium">{label}</p>
+          {sub && <p className="text-[10px] font-mono text-gray-600 mt-0.5">{sub}</p>}
+        </div>
+        <span className="text-sm font-display font-bold text-sentinel-accent tabular-nums">{value}{unit ?? "%"}</span>
+      </div>
+      <input type="range" min={min} max={max} value={value} onChange={e => onChange(Number(e.target.value))}
+        className="w-full accent-cyan-400" />
+    </div>
+  );
+}
+
+// ── Section content ────────────────────────────────────────────────────────
+function ThemeSection({ settings, set }: { settings: PlatformSettings; set: <K extends keyof PlatformSettings>(k: K, v: PlatformSettings[K]) => void }) {
+  return (
+    <div className="space-y-0">
+      <Toggle value={settings.scanlines}   onChange={v => set("scanlines", v)}   label="Scanlines"     sub="CRT scanline overlay for cinematic effect" />
+      <Toggle value={settings.cyberGrid}   onChange={v => set("cyberGrid", v)}   label="Cyber Grid"    sub="Background dot-grid pattern" />
+      <Toggle value={settings.glowEffects} onChange={v => set("glowEffects", v)} label="Glow Effects"  sub="Neon glow on nodes, cards, and buttons" />
+      <Toggle value={settings.particleFlow}onChange={v => set("particleFlow", v)}label="Particle Flow" sub="Animated packet particles on topology edges" />
+      <Toggle value={settings.animations}  onChange={v => set("animations", v)}  label="Animations"    sub="Framer Motion transitions and micro-interactions" />
+      <RangeSlider value={settings.glowIntensity} onChange={v => set("glowIntensity", v)} label="Glow Intensity" sub="Controls neon glow brightness globally" min={0} max={100} />
+      <RangeSlider value={settings.animSpeed}     onChange={v => set("animSpeed", v)}     label="Animation Speed" sub="Higher = faster transitions"             min={20} max={150} />
+    </div>
+  );
+}
+
+function PerformanceSection({ settings, set }: { settings: PlatformSettings; set: <K extends keyof PlatformSettings>(k: K, v: PlatformSettings[K]) => void }) {
+  return (
+    <div>
+      <RangeSlider value={settings.d3Quality} onChange={v => set("d3Quality", v)} label="D3 Render Quality" sub="Higher quality = more CPU usage in topology" min={20} max={100} />
+      <div className="mt-4 p-3 rounded-lg bg-yellow-500/5 border border-yellow-500/20">
+        <p className="text-[10px] font-mono text-yellow-400 uppercase tracking-widest mb-1">Performance Mode</p>
+        <p className="text-[10px] font-mono text-gray-500">Set D3 quality ≤ 50 for smoother rendering on lower-end hardware. Topology node count remains unchanged.</p>
+      </div>
+    </div>
+  );
+}
+
+function WebSocketSection({ settings, set }: { settings: PlatformSettings; set: <K extends keyof PlatformSettings>(k: K, v: PlatformSettings[K]) => void }) {
+  return (
+    <div>
+      <Toggle value={settings.wsReconnect} onChange={v => set("wsReconnect", v)} label="Auto Reconnect" sub="Automatically reconnect on connection loss" />
+      <Toggle value={settings.wsDebug}     onChange={v => set("wsDebug", v)}     label="Debug Mode"     sub="Log all WebSocket messages to console" />
+      <RangeSlider value={settings.wsRateLimit} onChange={v => set("wsRateLimit", v)} label="Rate Limit" sub="Max messages per second processed from stream" min={10} max={500} unit="/s" />
+    </div>
+  );
+}
+
+function AISection({ settings, set }: { settings: PlatformSettings; set: <K extends keyof PlatformSettings>(k: K, v: PlatformSettings[K]) => void }) {
+  return (
+    <div>
+      <Toggle value={settings.autoRemediation} onChange={v => set("autoRemediation", v)} label="Autonomous Remediation" sub="Allow AI to execute kubectl commands automatically" />
+      <RangeSlider value={settings.aiConfThreshold} onChange={v => set("aiConfThreshold", v)} label="Confidence Threshold" sub="Minimum AI confidence required to trigger remediation" min={50} max={99} />
+      <RangeSlider value={settings.maxReasoning}    onChange={v => set("maxReasoning", v)}    label="Max Reasoning Log"   sub="Maximum entries retained in the cognitive stream"     min={10} max={200} unit=" entries" />
+    </div>
+  );
+}
+
+function ReplaySection({ settings, set }: { settings: PlatformSettings; set: <K extends keyof PlatformSettings>(k: K, v: PlatformSettings[K]) => void }) {
+  return (
+    <div>
+      <Toggle value={settings.replayAutoplay}   onChange={v => set("replayAutoplay", v)}   label="Auto-play Replay"     sub="Begin replay automatically when opened" />
+      <Toggle value={settings.replayCinematic}  onChange={v => set("replayCinematic", v)}  label="Cinematic Mode"       sub="Dramatic camera movements and transitions during replay" />
+      <RangeSlider value={settings.replaySpeed} onChange={v => set("replaySpeed", v)}      label="Replay Speed" sub="Default playback speed (100 = 1×, 200 = 2×)" min={25} max={400} unit="%" />
+    </div>
+  );
+}
+
+// ── Main page ──────────────────────────────────────────────────────────────
 export default function SystemSettings() {
-  const [activeSection, setActiveSection] = useState("theme");
-  const [settings, setSettings] = useState({
-    darkMode:         true,
-    scanlines:        true,
-    cyberGrid:        true,
-    particleFlow:     true,
-    glowEffects:      true,
-    animations:       true,
-    animSpeed:        80,
-    d3Quality:        90,
-    wsReconnect:      true,
-    wsDebug:          false,
-    wsRateLimit:      100,
-    autoRemediation:  true,
-    aiConfThreshold:  75,
-    maxReasoning:     60,
-    replayAutoplay:   false,
-    replayCinematic:  true,
-    replaySpeed:      100,
-  });
-
-  const set = <K extends keyof typeof settings>(k: K, v: typeof settings[K]) =>
-    setSettings(s => ({ ...s, [k]: v }));
-
+  const { settings, set, reset } = useSettings();
+  const [active, setActive] = useState<SectionId>("theme");
   const [saved, setSaved] = useState(false);
-  const save = () => { setSaved(true); setTimeout(() => setSaved(false), 2000); };
+
+  const handleSave = () => {
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
+  };
+
+  const renderSection = () => {
+    switch (active) {
+      case "theme":       return <ThemeSection settings={settings} set={set} />;
+      case "performance": return <PerformanceSection settings={settings} set={set} />;
+      case "websocket":   return <WebSocketSection settings={settings} set={set} />;
+      case "ai":          return <AISection settings={settings} set={set} />;
+      case "replay":      return <ReplaySection settings={settings} set={set} />;
+    }
+  };
+
+  const activeSection = SECTIONS.find(s => s.id === active)!;
 
   return (
     <div className="h-full flex flex-col gap-6">
+      {/* Header */}
       <header className="flex items-end justify-between">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 bg-gray-500/10 border border-gray-500/30 rounded-xl flex items-center justify-center">
-            <Settings className="w-6 h-6 text-gray-400" />
+            <Sliders className="w-6 h-6 text-gray-400" />
           </div>
           <div>
             <h1 className="page-title">System Settings</h1>
-            <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest mt-1">Platform configuration · UI customization · Demo controls</p>
+            <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest mt-1">
+              Platform configuration · UI customization · Demo controls
+            </p>
           </div>
         </div>
-        <motion.button
-          whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-          onClick={save}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl border font-display font-semibold text-sm transition-all ${saved ? "bg-green-500/20 border-green-500/50 text-green-400" : "bg-sentinel-accent/15 border-sentinel-accent/40 text-sentinel-accent"}`}
-        >
-          {saved ? <><Check className="w-4 h-4" /> Saved!</> : "Save Settings"}
-        </motion.button>
+        <div className="flex items-center gap-3">
+          <button onClick={reset}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl glass-panel border border-sentinel-700/50 text-gray-400 hover:text-white hover:border-sentinel-accent/30 text-xs font-mono uppercase tracking-widest transition-all">
+            <RotateCcw className="w-3.5 h-3.5" /> Reset Defaults
+          </button>
+          <motion.button onClick={handleSave} whileTap={{ scale: 0.96 }}
+            className="flex items-center gap-2 px-5 py-2 rounded-xl bg-sentinel-accent/20 border border-sentinel-accent/40 text-sentinel-accent text-xs font-mono uppercase tracking-widest hover:bg-sentinel-accent/30 transition-all"
+            style={{ boxShadow: "0 0 16px rgba(34,211,238,0.15)" }}>
+            {saved ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Save className="w-3.5 h-3.5" />}
+            {saved ? "Saved!" : "Save Settings"}
+          </motion.button>
+        </div>
       </header>
 
-      <div className="flex gap-6 flex-1 min-h-0">
+      <div className="grid grid-cols-12 gap-6 flex-1 min-h-0">
         {/* Sidebar nav */}
-        <div className="w-52 shrink-0 space-y-1">
-          {SECTIONS.map(s => (
-            <button
-              key={s.id}
-              onClick={() => setActiveSection(s.id)}
-              className={`nav-item w-full text-left ${activeSection === s.id ? "active" : "text-gray-400"}`}
-            >
-              {s.icon}
-              <span>{s.label}</span>
+        <div className="col-span-3 space-y-1">
+          {SECTIONS.map(section => (
+            <button key={section.id} onClick={() => setActive(section.id)}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200 ${active === section.id
+                ? "glass-panel border border-sentinel-accent/25 bg-sentinel-accent/5"
+                : "hover:bg-white/3 border border-transparent"
+              }`}>
+              <span className={active === section.id ? "text-sentinel-accent" : section.color + " opacity-50"}>
+                {section.icon}
+              </span>
+              <span className={`text-xs font-display font-semibold ${active === section.id ? "text-white" : "text-gray-500"}`}>
+                {section.label}
+              </span>
+              {active === section.id && <ChevronRight className="w-3 h-3 text-sentinel-accent ml-auto" />}
             </button>
           ))}
+
+          {/* Live status indicators */}
+          <div className="mt-6 p-4 rounded-xl glass-panel border border-sentinel-700/30">
+            <p className="text-[9px] font-mono text-gray-600 uppercase tracking-widest mb-3">Live Overrides</p>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-[9px] font-mono">
+                <span className="text-gray-600">Scanlines</span>
+                <span className={settings.scanlines ? "text-green-400" : "text-gray-600"}>
+                  {settings.scanlines ? "ON" : "OFF"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-[9px] font-mono">
+                <span className="text-gray-600">Glow</span>
+                <span className={settings.glowEffects ? "text-cyan-400" : "text-gray-600"}>
+                  {settings.glowEffects ? `${settings.glowIntensity}%` : "OFF"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-[9px] font-mono">
+                <span className="text-gray-600">Auto-remediation</span>
+                <span className={settings.autoRemediation ? "text-green-400" : "text-red-400"}>
+                  {settings.autoRemediation ? "ENABLED" : "DISABLED"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-[9px] font-mono">
+                <span className="text-gray-600">AI Confidence</span>
+                <span className="text-purple-400">{settings.aiConfThreshold}%</span>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Settings panels */}
-        <div className="flex-1 overflow-y-auto">
+        {/* Settings content */}
+        <div className="col-span-9">
           <AnimatePresence mode="wait">
-            <motion.div
-              key={activeSection}
-              initial={{ opacity: 0, x: 10 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -10 }}
-              transition={{ duration: 0.2 }}
-              className="glass-panel rounded-xl border border-sentinel-700/50 p-6 space-y-6"
-            >
-              {activeSection === "theme" && (
-                <>
-                  <h2 className="text-base font-display font-bold text-white border-b border-sentinel-700/40 pb-3">Theme & Visuals</h2>
-                  <div className="space-y-5">
-                    {[
-                      ["Dark Mode",       "darkMode",      "Always-on dark cinematic theme"],
-                      ["Scanlines",       "scanlines",     "CRT scanline overlay for cinematic effect"],
-                      ["Cyber Grid",      "cyberGrid",     "Background dot-grid pattern"],
-                      ["Particle Flow",   "particleFlow",  "Animated packet particles on topology edges"],
-                      ["Glow Effects",    "glowEffects",   "Neon glow on nodes, cards, and buttons"],
-                      ["Animations",      "animations",    "Framer Motion transitions and micro-interactions"],
-                    ].map(([label, key, desc]) => (
-                      <div key={key} className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-sans text-white">{label}</p>
-                          <p className="text-[10px] font-mono text-gray-500 mt-0.5">{desc}</p>
-                        </div>
-                        <Toggle value={settings[key as keyof typeof settings] as boolean} onChange={v => set(key as keyof typeof settings, v as any)} />
-                      </div>
-                    ))}
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-sm font-sans text-white">Animation Speed</p>
-                        <span className="text-xs font-mono text-sentinel-accent">{settings.animSpeed}%</span>
-                      </div>
-                      <Slider value={settings.animSpeed} min={20} max={150} onChange={v => set("animSpeed", v)} />
-                    </div>
-                  </div>
-                </>
-              )}
-              {activeSection === "performance" && (
-                <>
-                  <h2 className="text-base font-display font-bold text-white border-b border-sentinel-700/40 pb-3">Performance Settings</h2>
-                  <div className="space-y-5">
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <div>
-                          <p className="text-sm font-sans text-white">D3 Render Quality</p>
-                          <p className="text-[10px] font-mono text-gray-500">Higher = more particles, better glow (may reduce FPS)</p>
-                        </div>
-                        <span className="text-xs font-mono text-sentinel-accent">{settings.d3Quality}%</span>
-                      </div>
-                      <Slider value={settings.d3Quality} min={20} max={100} onChange={v => set("d3Quality", v)} />
-                    </div>
-                    {[
-                      ["Animations", "animations", "Enable framer-motion transitions"],
-                      ["Glow Effects", "glowEffects", "SVG filter glow (GPU-accelerated)"],
-                    ].map(([label, key, desc]) => (
-                      <div key={key} className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-sans text-white">{label}</p>
-                          <p className="text-[10px] font-mono text-gray-500">{desc}</p>
-                        </div>
-                        <Toggle value={settings[key as keyof typeof settings] as boolean} onChange={v => set(key as keyof typeof settings, v as any)} />
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
-              {activeSection === "ws" && (
-                <>
-                  <h2 className="text-base font-display font-bold text-white border-b border-sentinel-700/40 pb-3">WebSocket Settings</h2>
-                  <div className="space-y-5">
-                    {[
-                      ["Auto Reconnect", "wsReconnect", "Automatically reconnect on disconnect"],
-                      ["Debug Mode",     "wsDebug",     "Log all WS messages to console"],
-                    ].map(([label, key, desc]) => (
-                      <div key={key} className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-sans text-white">{label}</p>
-                          <p className="text-[10px] font-mono text-gray-500">{desc}</p>
-                        </div>
-                        <Toggle value={settings[key as keyof typeof settings] as boolean} onChange={v => set(key as keyof typeof settings, v as any)} />
-                      </div>
-                    ))}
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <div>
-                          <p className="text-sm font-sans text-white">Event Buffer Rate Limit</p>
-                          <p className="text-[10px] font-mono text-gray-500">Max events/second to render</p>
-                        </div>
-                        <span className="text-xs font-mono text-sentinel-accent">{settings.wsRateLimit}/s</span>
-                      </div>
-                      <Slider value={settings.wsRateLimit} min={10} max={500} onChange={v => set("wsRateLimit", v)} />
-                    </div>
-                  </div>
-                </>
-              )}
-              {activeSection === "ai" && (
-                <>
-                  <h2 className="text-base font-display font-bold text-white border-b border-sentinel-700/40 pb-3">AI Settings</h2>
-                  <div className="space-y-5">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-sans text-white">Autonomous Remediation</p>
-                        <p className="text-[10px] font-mono text-gray-500">Allow AI to apply kubectl fixes automatically</p>
-                      </div>
-                      <Toggle value={settings.autoRemediation} onChange={v => set("autoRemediation", v)} color="bg-green-500" />
-                    </div>
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <div>
-                          <p className="text-sm font-sans text-white">Confidence Threshold</p>
-                          <p className="text-[10px] font-mono text-gray-500">Min confidence before autonomous action</p>
-                        </div>
-                        <span className="text-xs font-mono text-sentinel-accent">{settings.aiConfThreshold}%</span>
-                      </div>
-                      <Slider value={settings.aiConfThreshold} min={50} max={99} onChange={v => set("aiConfThreshold", v)} />
-                    </div>
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <div>
-                          <p className="text-sm font-sans text-white">Reasoning Log Buffer</p>
-                          <p className="text-[10px] font-mono text-gray-500">Max messages to keep in streaming log</p>
-                        </div>
-                        <span className="text-xs font-mono text-sentinel-accent">{settings.maxReasoning}</span>
-                      </div>
-                      <Slider value={settings.maxReasoning} min={10} max={200} onChange={v => set("maxReasoning", v)} />
-                    </div>
-                  </div>
-                </>
-              )}
-              {activeSection === "replay" && (
-                <>
-                  <h2 className="text-base font-display font-bold text-white border-b border-sentinel-700/40 pb-3">Replay & Demo Settings</h2>
-                  <div className="space-y-5">
-                    {[
-                      ["Auto-Play Replay",   "replayAutoplay",  "Start replay automatically on page open"],
-                      ["Cinematic Mode",     "replayCinematic", "Enable camera transitions and overlays"],
-                    ].map(([label, key, desc]) => (
-                      <div key={key} className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-sans text-white">{label}</p>
-                          <p className="text-[10px] font-mono text-gray-500">{desc}</p>
-                        </div>
-                        <Toggle value={settings[key as keyof typeof settings] as boolean} onChange={v => set(key as keyof typeof settings, v as any)} />
-                      </div>
-                    ))}
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <div>
-                          <p className="text-sm font-sans text-white">Default Replay Speed</p>
-                          <p className="text-[10px] font-mono text-gray-500">Playback rate (100% = realtime)</p>
-                        </div>
-                        <span className="text-xs font-mono text-sentinel-accent">{settings.replaySpeed}%</span>
-                      </div>
-                      <Slider value={settings.replaySpeed} min={25} max={400} onChange={v => set("replaySpeed", v)} />
-                    </div>
-                  </div>
-                </>
-              )}
+            <motion.div key={active} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -10 }} transition={{ duration: 0.2 }}
+              className="glass-panel rounded-xl border border-sentinel-700/40 overflow-hidden h-full">
+              {/* Section header */}
+              <div className="px-6 py-4 border-b border-sentinel-700/40 flex items-center gap-3">
+                <span className={activeSection.color}>{activeSection.icon}</span>
+                <h2 className="text-sm font-display font-bold text-white">{activeSection.label}</h2>
+                <span className="text-[9px] font-mono text-gray-600 ml-2 uppercase tracking-widest">
+                  Changes apply instantly · Persisted to localStorage
+                </span>
+              </div>
+              <div className="px-6 py-2 overflow-y-auto h-full">
+                {renderSection()}
+              </div>
             </motion.div>
           </AnimatePresence>
         </div>

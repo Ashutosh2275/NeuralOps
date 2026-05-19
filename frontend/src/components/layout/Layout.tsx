@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { useWebSocket } from "../../hooks/useWebSocket";
+import { usePlatform } from "../../contexts/PlatformContext";
+import { useTheme } from "../../contexts/ThemeContext";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, AlertOctagon, Network, Cpu, Terminal,
   ActivitySquare, ChevronLeft, ChevronRight, Radio, ShieldCheck,
-  Brain, BarChart3, Clapperboard, Shield, Settings, Zap
+  Brain, BarChart3, FlaskConical, Shield, Settings, Zap
 } from "lucide-react";
 
 // ── Nav groups ─────────────────────────────────────────────────
@@ -13,32 +14,31 @@ const NAV_GROUPS = [
   {
     label: "Core",
     items: [
-      { path: "/",               label: "Operations",   icon: LayoutDashboard, desc: "Global overview",       accent: "cyan"   },
-      { path: "/incident-command",label:"AI War Room",  icon: ActivitySquare,  desc: "Live incident AI",      accent: "red"    },
-      { path: "/command-center", label: "War Room",     icon: Terminal,        desc: "Enterprise command",    accent: "orange" },
+      { path: "/",               label: "Operations",  icon: LayoutDashboard, desc: "Global overview",        accent: "cyan"   },
+      { path: "/incident-command",label:"AI War Room", icon: ActivitySquare,  desc: "Central command",        accent: "red"    },
     ],
   },
   {
     label: "Intelligence",
     items: [
-      { path: "/incidents",      label: "Incidents",    icon: AlertOctagon,    desc: "Active anomalies",      accent: "red"    },
-      { path: "/topology",       label: "Neural Map",   icon: Network,         desc: "Dependency graph",      accent: "cyan"   },
-      { path: "/ai-agents",      label: "AI Agents",    icon: Brain,           desc: "Orchestration network",  accent: "purple" },
-      { path: "/nlp",            label: "AI Oracle",    icon: Cpu,             desc: "NLP assistant",         accent: "purple" },
+      { path: "/incidents",      label: "Incidents",   icon: AlertOctagon,   desc: "Active anomalies",        accent: "red"    },
+      { path: "/topology",       label: "Neural Map",  icon: Network,        desc: "Dependency graph",        accent: "cyan"   },
+      { path: "/ai-agents",      label: "AI Agents",   icon: Brain,          desc: "Orchestration network",   accent: "purple" },
+      { path: "/nlp",            label: "AI Oracle",   icon: Cpu,            desc: "NLP assistant",           accent: "purple" },
     ],
   },
   {
     label: "Insights",
     items: [
-      { path: "/analytics",      label: "Analytics",    icon: BarChart3,       desc: "Infra trends",          accent: "cyan"   },
-      { path: "/security",       label: "Security",     icon: Shield,          desc: "Resilience status",     accent: "green"  },
+      { path: "/analytics",      label: "Analytics",   icon: BarChart3,      desc: "Infra trends",            accent: "cyan"   },
+      { path: "/security",       label: "Security",    icon: Shield,         desc: "Resilience status",       accent: "green"  },
     ],
   },
   {
     label: "Platform",
     items: [
-      { path: "/demo",           label: "Demo Center",  icon: Clapperboard,    desc: "Chaos & presentation",  accent: "yellow" },
-      { path: "/settings",       label: "Settings",     icon: Settings,        desc: "Platform config",       accent: "gray"   },
+      { path: "/chaos-lab",      label: "Chaos Lab",   icon: FlaskConical,   desc: "Failure orchestration",   accent: "yellow" },
+      { path: "/settings",       label: "Settings",    icon: Settings,       desc: "Platform config",         accent: "gray"   },
     ],
   },
 ];
@@ -61,11 +61,11 @@ const pageVariants = {
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
-  const { connected, events } = useWebSocket();
+  const { state } = usePlatform();
+  const { isDarkMode } = useTheme();
   const [collapsed, setCollapsed] = useState(false);
   const [time, setTime] = useState(new Date());
   const [activityFlash, setActivityFlash] = useState(false);
-  const [incidentCount, setIncidentCount] = useState(0);
 
   useEffect(() => {
     const t = setInterval(() => setTime(new Date()), 1000);
@@ -73,21 +73,24 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!events.length) return;
+    if (!state.wsEventCount) return;
     setActivityFlash(true);
     setTimeout(() => setActivityFlash(false), 1200);
-    // Count anomaly events
-    if (events[0]?.type === "anomaly") setIncidentCount(c => c + 1);
-  }, [events.length]);
+  }, [state.wsEventCount]);
 
+  const incidentCount = state.criticalCount;
   const currentNav = NAV_GROUPS.flatMap(g => g.items).find(n => n.path === location.pathname);
 
+
   return (
-    <div className="min-h-screen flex bg-sentinel-950 overflow-hidden relative">
-      {/* Ambient backgrounds */}
-      <div className="absolute inset-0 cyber-grid opacity-100 pointer-events-none" />
-      <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_90%_55%_at_50%_0%,rgba(34,211,238,0.055),transparent)]" />
-      <div className="scanlines absolute inset-0 z-50 pointer-events-none opacity-25" />
+    <div className="min-h-screen flex overflow-hidden relative" style={{ backgroundColor: "#09121f" }}>
+      {/* Subtle cyber grid — very low opacity */}
+      <div className="absolute inset-0 cyber-grid pointer-events-none" style={{ opacity: 0.6 }} />
+      {/* Very subtle top glow — reduced from 0.055 to 0.028 */}
+      <div className="absolute inset-x-0 top-0 h-96 pointer-events-none"
+        style={{ background: "radial-gradient(ellipse 80% 40% at 50% 0%, rgba(34,211,238,0.028) 0%, transparent 100%)" }} />
+      {/* Scanlines — extremely subtle */}
+      <div className="scanlines absolute inset-0 z-50 pointer-events-none" style={{ opacity: 0.18 }} />
 
       {/* ── Sidebar ────────────────────────────────────────────── */}
       <motion.aside
@@ -95,9 +98,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         transition={{ type: "spring", stiffness: 400, damping: 36 }}
         className="relative z-20 flex flex-col shrink-0 overflow-hidden"
         style={{
-          background: "linear-gradient(180deg, rgba(9,17,30,0.98) 0%, rgba(5,10,20,0.98) 100%)",
-          borderRight: "1px solid rgba(34,211,238,0.1)",
-          boxShadow: "4px 0 40px rgba(0,0,0,0.6)",
+          background: "#060d18",
+          borderRight: "1px solid rgba(34,211,238,0.08)",
+          boxShadow: "4px 0 32px rgba(0,0,0,0.7)",
         }}
       >
         {/* Brand */}
@@ -201,19 +204,19 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           )}
           <div className={`flex items-center gap-2 px-3 py-2 rounded-lg bg-black/30 ${collapsed ? "justify-center" : ""}`}>
             <div className="shrink-0">
-              <div className={connected ? "status-dot-live" : "status-dot-alert"} />
+              <div className={state.wsConnected ? "status-dot-live" : "status-dot-alert"} />
             </div>
             <AnimatePresence>
               {!collapsed && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col min-w-0">
                   <span className="text-[8px] font-mono text-gray-600 uppercase tracking-[0.2em]">Data Stream</span>
-                  <span className={`text-[10px] font-display font-semibold ${connected ? "text-sentinel-success" : "text-sentinel-danger"}`}>
-                    {connected ? "SECURE LINE" : "OFFLINE"}
+                  <span className={`text-[10px] font-display font-semibold ${state.wsConnected ? "text-sentinel-success" : "text-sentinel-danger"}`}>
+                    {state.wsConnected ? "SECURE LINE" : "OFFLINE"}
                   </span>
                 </motion.div>
               )}
             </AnimatePresence>
-            {activityFlash && connected && !collapsed && (
+            {activityFlash && state.wsConnected && !collapsed && (
               <motion.div initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="ml-auto">
                 <Zap className="w-3 h-3 text-sentinel-accent" />
               </motion.div>
@@ -234,8 +237,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <main className="flex-1 overflow-auto flex flex-col relative z-10">
         {/* Top bar */}
         <div
-          className="shrink-0 flex items-center justify-between px-8 py-3 border-b border-white/5"
-          style={{ background: "rgba(4,8,15,0.85)", backdropFilter: "blur(20px)" }}
+          className="shrink-0 flex items-center justify-between px-8 py-3 border-b"
+          style={{
+            background: "rgba(6,13,24,0.96)",
+            borderBottomColor: "rgba(40,65,105,0.3)",
+          }}
         >
           {/* Breadcrumb */}
           <div className="flex items-center gap-2 text-[10px] font-mono">
@@ -255,9 +261,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <ShieldCheck className="w-3 h-3 text-sentinel-success" />
               <span>Zero-Trust Enclave</span>
             </div>
-            <div className={`flex items-center gap-1 text-[9px] font-mono uppercase tracking-widest ${connected ? "text-sentinel-success" : "text-sentinel-danger"}`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${connected ? "bg-sentinel-success animate-pulse" : "bg-sentinel-danger"}`} />
-              {connected ? "LIVE" : "OFFLINE"}
+            <div className={`flex items-center gap-1 text-[9px] font-mono uppercase tracking-widest ${state.wsConnected ? "text-sentinel-success" : "text-sentinel-danger"}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${state.wsConnected ? "bg-sentinel-success animate-pulse" : "bg-sentinel-danger"}`} />
+              {state.wsConnected ? "LIVE" : "OFFLINE"}
             </div>
           </div>
         </div>
