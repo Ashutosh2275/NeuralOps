@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+﻿import { useEffect, useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import { api, IncidentSummary } from "../lib/api";
 import { motion, AnimatePresence } from "framer-motion";
@@ -42,7 +42,7 @@ export default function Incidents() {
   };
 
   return (
-    <div className="h-full flex flex-col gap-6">
+    <div className="h-full flex flex-col gap-6 min-h-0">
       {/* Header */}
       <header className="flex justify-between items-end">
         <div className="flex items-center gap-4">
@@ -97,18 +97,12 @@ export default function Incidents() {
           </div>
         </div>
       ) : (
-        <div className="flex-1 flex flex-col gap-3 overflow-y-auto pr-1">
+        <div className="flex-1 flex flex-col gap-3 overflow-y-auto pr-2 min-h-0 scrollbar-thin scrollbar-thumb-cyan-500/20 scrollbar-track-transparent">
           <AnimatePresence mode="popLayout">
             {filtered.map((inc, i) => {
               const cfg = (SEV_CONFIG as any)[inc.severity] ?? SEV_CONFIG.low;
               return (
-                <motion.div
-                  key={inc.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ delay: i * 0.04, type: "spring", stiffness: 350, damping: 30 }}
-                >
+                <motion.div key={inc.id} layout initial={{ opacity: 0, x: -20, filter: "blur(4px)" }} animate={{ opacity: 1, x: 0, filter: "blur(0px)" }} exit={{ opacity: 0, scale: 0.95 }} transition={{ type: "spring", stiffness: 350, damping: 25 }} >
                   <Link to={`/incidents/${inc.id}`}>
                     <div className={`glass-panel border-l-4 ${cfg.border} ${cfg.bg} ${cfg.glow} rounded-xl p-5 group hover:bg-white/5 transition-all duration-300 flex items-start gap-5`}>
                       {/* Severity indicator */}
@@ -130,11 +124,11 @@ export default function Incidents() {
                         <div className="flex flex-wrap gap-4 text-xs font-mono">
                           <span className="text-gray-400">
                             <span className="text-gray-600 mr-1">SVC</span>
-                            <span className="text-sentinel-accent">{inc.root_service ?? "—"}</span>
+                            <span className="text-sentinel-accent">{inc.root_service ?? "â€”"}</span>
                           </span>
                           <span className="text-gray-400">
                             <span className="text-gray-600 mr-1">CONF</span>
-                            <span className="text-green-400">{inc.confidence_score != null ? `${(inc.confidence_score * 100).toFixed(0)}%` : "—"}</span>
+                            <span className="text-green-400">{inc.confidence_score != null ? `${(inc.confidence_score * 100).toFixed(0)}%` : "â€”"}</span>
                           </span>
                           <span className="text-gray-400 flex items-center gap-1">
                             <Clock size={11} className="text-gray-600" />
@@ -169,3 +163,5 @@ export default function Incidents() {
     </div>
   );
 }
+
+
