@@ -56,8 +56,12 @@ export default function RecommendationPanel({ items = [] }: { items?: Recommenda
           {all.map((r, i) => {
             const pMeta = PRIORITY_META[r.priority] ?? PRIORITY_META[4];
             return (
-              <motion.div key={r.id} initial={{ opacity:0, x:-8 }} animate={{ opacity:1, x:0 }}
-                exit={{ opacity:0 }} transition={{ delay:i*0.05 }}
+              <motion.div key={r.id} 
+                layout
+                initial={{ opacity:0, y:-10, filter: "blur(4px)" }} 
+                animate={{ opacity:1, y:0, filter: "blur(0px)" }}
+                exit={{ opacity:0, scale: 0.95 }} 
+                transition={{ type: "spring", stiffness: 350, damping: 25, delay: i * 0.05 }}
                 style={{ background:"rgba(255,255,255,0.02)", border:"1px solid rgba(40,65,105,0.25)", borderRadius:8, padding:"0.55rem 0.65rem" }}>
                 <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:8, marginBottom:4 }}>
                   <span style={{ fontSize:"0.5625rem", fontFamily:"Space Grotesk", fontWeight:600, color:"rgba(255,255,255,0.75)", lineHeight:1.45, flex:1 }}>{r.title}</span>

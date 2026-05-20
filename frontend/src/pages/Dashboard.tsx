@@ -276,12 +276,16 @@ export default function Dashboard() {
             </div>
 
             <div style={{ overflowY: "auto", maxHeight: 260 }}>
-              <AnimatePresence>
+              <AnimatePresence mode="popLayout">
                 {incidents.slice(0, 7).map((inc) => {
                   const s = SEV[inc.severity] ?? SEV.low;
                   return (
                     <motion.button key={inc.id}
-                      initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, height: 0 }}
+                      layout
+                      initial={{ opacity: 0, x: -15, scale: 0.98 }} 
+                      animate={{ opacity: 1, x: 0, scale: 1 }} 
+                      exit={{ opacity: 0, height: 0, x: -15, scale: 0.98 }}
+                      transition={{ type: "spring", stiffness: 400, damping: 25 }}
                       onClick={() => setSelectedId(inc.id)}
                       style={{
                         width: "100%", textAlign: "left",
@@ -341,7 +345,12 @@ export default function Dashboard() {
                 background: "linear-gradient(to top, rgb(11,19,34), transparent)", zIndex: 10, pointerEvents: "none" }} />
               <AnimatePresence mode="popLayout">
                 {reasoning.slice(0, 5).map(r => (
-                  <motion.div key={r.id} initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                  <motion.div key={r.id} 
+                    layout
+                    initial={{ opacity: 0, x: -10 }} 
+                    animate={{ opacity: 1, x: 0 }} 
+                    exit={{ opacity: 0, filter: "blur(4px)" }}
+                    transition={{ type: "spring", stiffness: 350, damping: 25 }}
                     className={`terminal-line ${r.kind === "critical" ? "!text-red-400 !border-l-red-500/50" : r.kind === "success" ? "!text-green-400 !border-l-green-500/50" : r.kind === "warn" ? "!text-yellow-400 !border-l-yellow-500/50" : ""}`}
                     style={{ marginBottom: 4 }}>
                     <span className="ts">[{r.agent}]</span> {r.text}

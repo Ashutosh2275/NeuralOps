@@ -87,8 +87,10 @@ export default function RCAPanel({ rca }: Props) {
         {/* Primary cause */}
         {rca.root_cause && (
           <motion.div
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
+            layout
+            initial={{ opacity: 0, y: 15, filter: "blur(5px)" }}
+            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+            transition={{ type: "spring", stiffness: 300, damping: 20 }}
             className="rounded-lg bg-sentinel-accent/5 border-l-2 border-sentinel-accent px-4 py-3"
           >
             <p className="text-[9px] font-mono text-sentinel-accent/50 uppercase tracking-widest mb-1">Primary Cause</p>
@@ -109,9 +111,10 @@ export default function RCAPanel({ rca }: Props) {
               {cascade.map((c, i) => (
                 <motion.div
                   key={i}
-                  initial={{ opacity: 0, x: -8 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.07 }}
+                  layout
+                  initial={{ opacity: 0, x: -15, filter: "blur(4px)" }}
+                  animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+                  transition={{ type: "spring", stiffness: 350, damping: 25, delay: i * 0.08 }}
                   className="glass-panel-light rounded-lg px-3 py-2"
                 >
                   <div className="flex items-center justify-between mb-1.5">

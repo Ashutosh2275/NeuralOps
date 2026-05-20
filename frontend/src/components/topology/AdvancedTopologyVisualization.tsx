@@ -210,8 +210,8 @@ export const AdvancedTopologyVisualization: React.FC<AdvancedTopologyProps> = ({
     const linkForce = simRef.current.force("link") as d3.ForceLink<TopoNode, TopoLink>;
     linkForce.links(links);
     
-    // Only restart simulation alpha slightly to adapt to new links/data, don't blast it
-    simRef.current.alpha(0.05).restart();
+    // We will handle ticking/alpha at the end after tick handlers are bound!
+
 
     // ── Update Links ──
     const linkSel = linkGRef.current.selectAll<SVGPathElement, TopoLink>("path").data(links, d => `${(d.source as any).id || d.source}-${(d.target as any).id || d.target}`);
@@ -356,6 +356,15 @@ export const AdvancedTopologyVisualization: React.FC<AdvancedTopologyProps> = ({
         n.attr("transform", d => `translate(${d.x ?? 0},${d.y ?? 0})`);
       }
     });
+
+    // APPLY PHYSICS FIXES
+    if (oldNodes.length === 0) {
+      simRef.current.stop();
+      for (let i = 0; i < 300; ++i) simRef.current.tick(); // Distribute nodes
+    } else {
+      simRef.current.alpha(0.01).restart();
+      setTimeout(() => { if (simRef.current) simRef.current.stop(); }, 800);
+    }
 
   }, [graph, blastRadiusNodes, rootCause, showPressure, showHealth, onNodeClick]);
 
