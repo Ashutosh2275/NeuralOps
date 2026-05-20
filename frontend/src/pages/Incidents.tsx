@@ -42,7 +42,7 @@ export default function Incidents() {
   };
 
   return (
-    <div className="h-full flex flex-col gap-6 min-h-0">
+    <div className="flex flex-col gap-6 min-h-0 p-6 rounded-2xl border border-white/5 shadow-[0_0_50px_rgba(0,0,0,0.5)]" style={{ height: "calc(100vh - 128px)", background: "rgba(6, 13, 24, 0.6)", backdropFilter: "blur(12px)" }}>
       {/* Header */}
       <header className="flex justify-between items-end">
         <div className="flex items-center gap-4">
@@ -163,5 +163,8 @@ export default function Incidents() {
     </div>
   );
 }
+
+
+
 
 
