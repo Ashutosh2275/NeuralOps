@@ -63,7 +63,7 @@ function CognitiveStream() {
         flex: 1, 
         overflowY: "auto", 
         overflowX: "hidden",
-        /* Removed fixed height for full liquid stretch */
+        minHeight: 0,
         display: "flex", 
         flexDirection: "column", 
         gap: 8, 
@@ -277,7 +277,7 @@ export default function IncidentCommandCenter() {
       {/* â”€â”€ Main Operations Grid â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}      <div style={{ flex: 1, display: "grid", gridTemplateColumns: "1.1fr 1.3fr 1fr", gap: 16, minHeight: 0 }}>
         
         {/* LEFT PANEL: Cognitive Stream */}
-        <div style={{ ...P, flex: 1, display: "flex", flexDirection: "column", padding: "1rem", overflow: "hidden" }}>
+        <div style={{ ...P, flex: 1, display: "flex", flexDirection: "column", padding: "1rem", overflow: "hidden", minHeight: 0 }}>
           <div style={PH}><Cpu size={14} color="#22d3ee" /> Cognitive Engine Stream</div>
           <CognitiveStream />
         </div>
@@ -316,6 +316,7 @@ export default function IncidentCommandCenter() {
     </div>
   );
 }
+
 
 
 
