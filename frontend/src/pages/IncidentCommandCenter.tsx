@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+﻿import React, { useEffect, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePlatform, useReasoningLog } from "../contexts/PlatformContext";
 import {
@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import DependencyGraph from "../components/topology/DependencyGraph";
 
-// ── Shared UI Settings ───────────────────────────────────────────────────
+// â”€â”€ Shared UI Settings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const P = {
   background: "rgba(10, 16, 28, 0.75)",
   backdropFilter: "blur(12px)",
@@ -28,7 +28,7 @@ const PH = {
   gap: 6
 };
 
-// ── Fallback Data Generation ─────────────────────────────────────────────
+// â”€â”€ Fallback Data Generation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const FALLBACK_SERVICES = [
   { id: "api-gateway", name: "API Gateway", status: "degraded", cpu: 89, lat: "1.4s" },
   { id: "auth-service", name: "Auth Svc", status: "healthy", cpu: 42, lat: "45ms" },
@@ -38,14 +38,14 @@ const FALLBACK_SERVICES = [
 ];
 
 const FALLBACK_REMEDIATION = [
-  { id: "R-1", text: "Isolating anomalous traffic on Payment Queue", status: "completed" },
-  { id: "R-2", text: "Draining stalled connections on Postgres DB", status: "completed" },
-  { id: "R-3", text: "Scaling API Gateway replicas (3 → 6)", status: "active" },
-  { id: "R-4", text: "Validating SLA latency recovery", status: "pending" },
-  { id: "R-5", text: "Resolving incident INC-2049", status: "pending" },
+  { id: "R-1", phase: "ISOLATION", text: "Isolate anomalous traffic on Payment Queue", status: "completed", time: "0.8s" },
+  { id: "R-2", phase: "MITIGATION", text: "Drain stalled connections on Postgres DB", status: "completed", time: "1.2s" },
+  { id: "R-3", phase: "RECOVERY", text: "Scale API Gateway replicas (3 -> 6)", status: "active", time: "in-progress" },
+  { id: "R-4", phase: "VALIDATION", text: "Healthcheck SLA latency bounds", status: "pending", time: "-" },
+  { id: "R-5", phase: "RESOLUTION", text: "Close incident INC-2049", status: "pending", time: "-" },
 ];
 
-// ── Sub-Components ───────────────────────────────────────────────────────
+// â”€â”€ Sub-Components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function CognitiveStream() {
   const reasoning = useReasoningLog();
   
@@ -63,7 +63,7 @@ function CognitiveStream() {
         flex: 1, 
         overflowY: "auto", 
         overflowX: "hidden",
-        maxHeight: "350px", // Constrains the length
+        /* Removed fixed height for full liquid stretch */
         display: "flex", 
         flexDirection: "column", 
         gap: 8, 
@@ -75,7 +75,7 @@ function CognitiveStream() {
         {items.slice(0, 50).map((log: any) => {
           const c = log.kind === "critical" ? "#ef4444" : log.kind === "warn" ? "#f97316" : log.kind === "success" ? "#10b981" : "#22d3ee";
           return (
-             <motion.div key={log.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
+             <motion.div key={log.id} layout transition={{ type: "spring", stiffness: 350, damping: 25 }} initial={{ opacity: 0, x: -10, filter: "blur(4px)" }} animate={{ opacity: 1, x: 0, filter: "blur(0px)" }} exit={{ opacity: 0, scale: 0.95 }}
                style={{
                  background: `linear-gradient(90deg, ${c}11, transparent)`,
                  borderLeft: `2px solid ${c}`, padding: "0.5rem 0.75rem", borderRadius: "0 6px 6px 0",
@@ -94,7 +94,7 @@ function CognitiveStream() {
   );
 }
 
-function ServiceImpactMatrix( { topology }: { topology: any } ) {
+function CompactMetrics( { topology }: { topology: any } ) {
   const [svcs, setSvcs] = useState(FALLBACK_SERVICES);
   
   // Mock live fluctuations
@@ -109,10 +109,22 @@ function ServiceImpactMatrix( { topology }: { topology: any } ) {
   }, []);
 
   return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6, overflowY: "auto" }}>
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 12, overflowY: "auto" }}>
+      {/* Top Level KPIs */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+        <div style={{ background: "rgba(255,255,255,0.03)", padding: "8px 12px", borderRadius: 8, borderLeft: "2px solid #ef4444" }}>
+          <div style={{ fontSize: "0.45rem", fontFamily: "JetBrains Mono", color: "rgba(255,255,255,0.4)" }}>IMPACTED SERVICES</div>
+          <div style={{ fontSize: "1rem", fontFamily: "Space Grotesk", color: "#ef4444", fontWeight: 700 }}>2 Critical</div>
+        </div>
+        <div style={{ background: "rgba(255,255,255,0.03)", padding: "8px 12px", borderRadius: 8, borderLeft: "2px solid #22d3ee" }}>
+          <div style={{ fontSize: "0.45rem", fontFamily: "JetBrains Mono", color: "rgba(255,255,255,0.4)" }}>ACTIVE ORCHESTRATIONS</div>
+          <div style={{ fontSize: "1rem", fontFamily: "Space Grotesk", color: "#22d3ee", fontWeight: 700 }}>3 Routines</div>
+        </div>
+      </div>
+
       <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 8, padding: "0 10px 6px",
-        borderBottom: "1px solid rgba(255,255,255,0.1)", fontSize: "0.5rem", fontFamily: "Space Grotesk", color: "rgba(255,255,255,0.4)" }}>
-        <span>SERVICE</span><span>LATENCY</span><span>CPU / STATUS</span>
+        borderBottom: "1px solid rgba(255,255,255,0.1)", fontSize: "0.45rem", fontFamily: "Space Grotesk", color: "rgba(255,255,255,0.4)" }}>
+        <span>CORE SERVICE</span><span>LATENCY P99</span><span>CPU SATURATION</span>
       </div>
       {svcs.map(s => {
         const c = s.status === 'healthy' ? '#10b981' : s.status === 'critical' ? '#ef4444' : '#f97316';
@@ -139,48 +151,54 @@ function ServiceImpactMatrix( { topology }: { topology: any } ) {
 
 function RemediationTimeline() {
   const [steps, setSteps] = useState(FALLBACK_REMEDIATION);
-  const [progress, setProgress] = useState(40);
 
   useEffect(() => {
     const t = setInterval(() => {
-      setProgress(p => {
-        if (p >= 80) return p;
-        if (p === 60) {
-          setSteps(s => s.map(st => st.id === "R-3" ? { ...st, status: "completed" } : st.id === "R-4" ? { ...st, status: "active" } : st));
-        }
-        return p + 20;
-      });
+      setSteps(s => s.map(st => st.id === "R-3" ? { ...st, status: "completed", time: "4.5s" } : st.id === "R-4" ? { ...st, status: "active", time: "running" } : st));
     }, 4500);
     return () => clearInterval(t);
   }, []);
 
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 12, overflow: "hidden" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{ fontSize: "0.55rem", fontFamily: "JetBrains Mono", color: "rgba(255,255,255,0.5)" }}>WORKFLOW: INC-MITIGATION-Alpha</span>
-        <span style={{ fontSize: "0.55rem", fontFamily: "JetBrains Mono", color: "#22d3ee" }}>{progress}% COMPLETE</span>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid rgba(255,255,255,0.05)", paddingBottom: 8 }}>
+        <span style={{ fontSize: "0.55rem", fontFamily: "JetBrains Mono", color: "rgba(255,255,255,0.5)" }}>ORCHESTRATOR WORKFLOW: <span style={{ color: "#fff" }}>INC-MITIGATION-Alpha</span></span>
+        <span style={{ fontSize: "0.45rem", fontFamily: "JetBrains Mono", color: "#22d3ee", border: "1px solid rgba(34,211,238,0.3)", padding: "2px 6px", borderRadius: 4, background: "rgba(34,211,238,0.1)" }}>EXECUTING</span>
       </div>
-      <div style={{ height: 2, background: "rgba(255,255,255,0.08)", borderRadius: 2, overflow: "hidden" }}>
-        <motion.div animate={{ width: `${progress}%` }} style={{ height: "100%", background: "linear-gradient(90deg, #3b82f6, #22d3ee)", borderRadius: 2 }} />
-      </div>
-      <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 8, padding: "8px 4px" }}>
+      
+      <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 10, padding: "4px 4px" }} className="scrollbar-thin scrollbar-thumb-cyan-500/20 scrollbar-track-transparent">
         {steps.map((st, i) => (
-          <div key={st.id} style={{ display: "flex", gap: 10, opacity: st.status === 'pending' ? 0.3 : 1 }}>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+          <div key={st.id} style={{ display: "flex", gap: 12, opacity: st.status === 'pending' ? 0.35 : 1 }}>
+            
+            {/* Timeline Line */}
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
               <div style={{ 
-                width: 14, height: 14, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-                background: st.status === 'completed' ? "#10b981" : st.status === 'active' ? "rgba(34,211,238,0.2)" : "transparent",
-                border: `1px solid ${st.status === 'completed' ? "#10b981" : st.status === 'active' ? "#22d3ee" : "rgba(255,255,255,0.2)"}`,
-                animation: st.status === 'active' ? "pulse-cyan 2s infinite" : "none"
+                width: 16, height: 16, borderRadius: "2px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                background: st.status === 'completed' ? "rgba(16,185,129,0.15)" : st.status === 'active' ? "rgba(34,211,238,0.15)" : "transparent",
+                border: `1px solid ${st.status === 'completed' ? "#10b981" : st.status === 'active' ? "#22d3ee" : "rgba(255,255,255,0.15)"}`,
+                transform: "rotate(45deg)"
               }}>
-                {st.status === 'completed' && <CheckCircle style={{ width: 8, height: 8, color: "white" }} />}
-                {st.status === 'active' && <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#22d3ee" }} />}
+                <div style={{ transform: "rotate(-45deg)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  {st.status === 'completed' && <CheckCircle style={{ width: 8, height: 8, color: "#10b981" }} />}
+                  {st.status === 'active' && <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#22d3ee", animation: "pulse-cyan 1.5s infinite" }} />}
+                </div>
               </div>
-              {i < steps.length -1 && <div style={{ width: 1, flex: 1, background: st.status === 'completed' ? "#10b981" : "rgba(255,255,255,0.1)", minHeight: 12 }} />}
+              {i < steps.length -1 && <div style={{ width: 1, flex: 1, background: st.status === 'completed' ? "#10b981" : st.status === 'active' ? "rgba(34,211,238,0.3)" : "rgba(255,255,255,0.1)", minHeight: 18 }} />}
             </div>
-            <div style={{ fontSize: "0.55rem", fontFamily: "JetBrains Mono", lineHeight: 1.4, color: st.status === 'completed' ? "rgba(255,255,255,0.5)" : st.status === 'active' ? "#22d3ee" : "rgba(255,255,255,0.3)", paddingBottom: 12 }}>
-              {st.text}
+
+            {/* Content block */}
+            <div style={{ flex: 1, paddingBottom: 16 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}>
+                <span style={{ fontSize: "0.45rem", fontFamily: "Space Grotesk", color: st.status === 'completed' ? "#10b981" : st.status === 'active' ? "#22d3ee" : "rgba(255,255,255,0.4)", letterSpacing: "0.1em" }}>
+                  PHASE: {st.phase}
+                </span>
+                <span style={{ fontSize: "0.45rem", fontFamily: "JetBrains Mono", color: "rgba(255,255,255,0.3)" }}>{st.time}</span>
+              </div>
+              <div style={{ fontSize: "0.6rem", fontFamily: "Space Grotesk", color: st.status === 'completed' ? "rgba(255,255,255,0.7)" : "#fff" }}>
+                {st.text}
+              </div>
             </div>
+
           </div>
         ))}
       </div>
@@ -207,7 +225,7 @@ function ConsensusForecast() {
   )
 }
 
-// ── Main Page ────────────────────────────────────────────────────────────
+// â”€â”€ Main Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export default function IncidentCommandCenter() {
   const { state } = usePlatform();
   const { topology, criticalCount, incidents } = state;
@@ -216,7 +234,7 @@ export default function IncidentCommandCenter() {
   return (
     <div style={{ height: "100%", display: "flex", flexDirection: "column", gap: 16, minHeight: 0, paddingRight: 4 }}>
       
-      {/* ── Top Command Bar ────────────────────────────────────────────── */}
+      {/* â”€â”€ Top Command Bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <header style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <div style={{ width: 44, height: 44, background: "rgba(239, 68, 68, 0.1)", border: "1px solid rgba(239, 68, 68, 0.4)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 0 20px rgba(239, 68, 68, 0.2)" }}>
@@ -224,7 +242,7 @@ export default function IncidentCommandCenter() {
           </div>
           <div>
             <h1 style={{ fontSize: "1.5rem", fontWeight: 800, fontFamily: "Space Grotesk", color: "#ef4444", textShadow: "0 0 16px rgba(239, 68, 68, 0.5)", margin: 0, lineHeight: 1.1 }}>
-              ACTIVE INCIDENT COMMAND
+              AI WAR ROOM
             </h1>
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
               <span style={{ fontSize: "0.55rem", fontFamily: "JetBrains Mono", color: "rgba(255,255,255,0.5)", textTransform: "uppercase" }}>Targeting:</span>
@@ -256,21 +274,12 @@ export default function IncidentCommandCenter() {
         </div>
       </header>
 
-      {/* ── Main Operations Grid ───────────────────────────────────────── */}
-      <div style={{ flex: 1, display: "grid", gridTemplateColumns: "1.1fr 1.3fr 1fr", gap: 16, minHeight: 0 }}>
+      {/* â”€â”€ Main Operations Grid â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}      <div style={{ flex: 1, display: "grid", gridTemplateColumns: "1.1fr 1.3fr 1fr", gap: 16, minHeight: 0 }}>
         
-        {/* LEFT PANEL: Cognitive Stream & Mini Map */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 16, minHeight: 0 }}>
-          <div style={{ ...P, flex: 1, display: "flex", flexDirection: "column", padding: "1rem", overflow: "hidden" }}>
-            <div style={PH}><Cpu size={14} color="#22d3ee" /> Cognitive Engine Stream</div>
-            <CognitiveStream />
-          </div>
-          <div style={{ ...P, height: 180, display: "flex", flexDirection: "column", padding: "0.8rem", overflow: "hidden", flexShrink: 0 }}>
-            <div style={PH}><Network size={14} color="#f97316" /> Blast Radius / Mini Topology</div>
-            <div style={{ flex: 1, position: "relative", borderRadius: 8, overflow: "hidden", border: "1px solid rgba(255,255,255,0.05)", background: "rgba(0,0,0,0.2)" }}>
-              {topology ? <DependencyGraph graph={topology} width={300} height={150} /> : <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", fontSize: "0.5rem", fontFamily: "JetBrains Mono", color: "rgba(255,255,255,0.2)" }}>NO TOPOLOGY SIGNAL</div>}
-            </div>
-          </div>
+        {/* LEFT PANEL: Cognitive Stream */}
+        <div style={{ ...P, flex: 1, display: "flex", flexDirection: "column", padding: "1rem", overflow: "hidden" }}>
+          <div style={PH}><Cpu size={14} color="#22d3ee" /> Cognitive Engine Stream</div>
+          <CognitiveStream />
         </div>
 
         {/* CENTER PANEL: Incident Remediation Timeline */}
@@ -280,7 +289,7 @@ export default function IncidentCommandCenter() {
              <RemediationTimeline />
              
              {/* Sub-panel in center for live action log */}
-             <div style={{ height: 120, background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 8, padding: "0.5rem", overflowY: "auto", fontFamily: "JetBrains Mono", fontSize: "0.5rem", color: "rgba(255,255,255,0.4)" }}>
+             <div style={{ height: 120, background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 8, padding: "0.5rem", overflowY: "auto", fontFamily: "JetBrains Mono", fontSize: "0.5rem", color: "rgba(255,255,255,0.4)", flexShrink: 0 }}>
                <div style={{ color: "#22d3ee", marginBottom: 4 }}>$ neural-agent orchestrate --incident INC-2049</div>
                <div>[SUCCESS] Lock acquired on api-gateway-0</div>
                <div>[INFO] Draining 1402 active sessions...</div>
@@ -290,21 +299,26 @@ export default function IncidentCommandCenter() {
           </div>
         </div>
 
-        {/* RIGHT PANEL: Service Impact Matrix */}
-        <div style={{ ...P, display: "flex", flexDirection: "column", padding: "1rem", minHeight: 0 }}>
-          <div style={PH}><Server size={14} color="#f97316" /> Service Impact Matrix</div>
-          <ServiceImpactMatrix topology={topology} />
-        </div>
-      </div>
-
-      {/* ── Bottom Section: AI Consensus & Forecast ────────────────────── */}
-      <div style={{ ...P, height: 90, padding: "1rem 1.5rem", display: "flex", flexShrink: 0 }}>
-        <div style={{ flex: 1 }}>
-           <div style={PH}><Crosshair size={14} color="#eab308" /> AI Consensus & Recovery Forecast</div>
-           <ConsensusForecast />
+        {/* RIGHT PANEL: Compact Metrics & Forecast */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 16, minHeight: 0 }}>
+          <div style={{ ...P, flex: 1, display: "flex", flexDirection: "column", padding: "1rem", minHeight: 0 }}>
+            <div style={PH}><Activity size={14} color="#f97316" /> Compact Metrics</div>
+            <CompactMetrics topology={topology} />
+          </div>
+          
+          <div style={{ ...P, padding: "1rem", flexShrink: 0 }}>
+            <div style={PH}><Crosshair size={14} color="#eab308" /> AI Consensus & Recovery Forecast</div>
+            <ConsensusForecast />
+          </div>
         </div>
       </div>
 
     </div>
   );
 }
+
+
+
+
+
+
