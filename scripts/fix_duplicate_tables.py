@@ -1,7 +1,7 @@
 import os
 import re
 
-models_dir = r"c:\Users\ASUS\Desktop\NeuralOps\backend\src\sentinelops\models"
+models_dir = r"c:\Users\ASUS\Desktop\NetraAI\backend\src\sentinelops\models"
 for filename in os.listdir(models_dir):
     if filename.endswith(".py"):
         filepath = os.path.join(models_dir, filename)

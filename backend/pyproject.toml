@@ -24,6 +24,9 @@ dependencies = [
     "networkx>=3.4.0",
 ]
 
+[project.scripts]
+sentinelops = "sentinelops.cli:main"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=8.3.0",

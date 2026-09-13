@@ -273,6 +273,12 @@ class DependencyIntelligenceEngine:
     def get_downstream(self, node_id: str, depth: int = 3) -> list[str]:
         return self.bfs_downstream(node_id, depth)
 
+    def get_dependencies(self, node_id: str, depth: int = 3) -> list[str]:
+        return self.get_downstream(node_id, depth)
+
+    def get_dependents(self, node_id: str, depth: int = 3) -> list[str]:
+        return self.get_upstream(node_id, depth)
+
     def find_cascade_path(self, root_node: str) -> list[dict[str, str | int | float]]:
         if root_node not in self._graph:
             return []

@@ -3,7 +3,9 @@ REM SentinelOps One-Click Deployment Script for Windows
 
 setlocal enabledelayedexpansion
 
-set PROJECT_ROOT=C:\Users\ASUS\Desktop\NeuralOps
+set PROJECT_ROOT=%~dp0
+REM Trim trailing backslash if present
+if "%PROJECT_ROOT:~-1%"=="\" set PROJECT_ROOT=%PROJECT_ROOT:~0,-1%
 set BACKEND_PORT=8000
 set FRONTEND_PORT=5173
 
@@ -14,11 +16,11 @@ echo.
 
 REM Check PostgreSQL
 echo [1/5] Checking PostgreSQL connection...
-psql -U neuralops sentinelops -c "SELECT 1" >nul 2>&1
+psql -U sentinelops sentinelops -c "SELECT 1" >nul 2>&1
 if %errorlevel% equ 0 (
     echo ✅ PostgreSQL connected
 ) else (
-    echo ⚠️  PostgreSQL connection failed. Make sure it's running.
+    echo ⚠️  PostgreSQL connection check skipped or service unreachable.
 )
 
 REM Run migrations

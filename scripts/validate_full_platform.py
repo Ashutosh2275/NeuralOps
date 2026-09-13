@@ -136,7 +136,7 @@ async def v_perf_metrics() -> str:
 # ── Main ─────────────────────────────────────────────────────────────────────
 async def main() -> None:
     print("\n╔════════════════════════════════════════════════╗")
-    print("║   NeuralOps Full Platform Validation Suite    ║")
+    print("║   NetraAI Full Platform Validation Suite    ║")
     print("╚════════════════════════════════════════════════╝\n")
 
     suite = [

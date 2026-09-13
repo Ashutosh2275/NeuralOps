@@ -46,6 +46,15 @@ class PrometheusCollector:
         self._normalizer = EventNormalizer()
         self._base_url = self._settings.prometheus_url.rstrip("/")
 
+    async def query_promql(self, query: str) -> list[dict[str, Any]]:
+        timeout = httpx.Timeout(self._settings.prometheus_query_timeout_seconds)
+        url = f"{self._base_url}/api/v1/query"
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            resp = await client.get(url, params={"query": query})
+            resp.raise_for_status()
+            data = resp.json()
+            return data.get("data", {}).get("result", [])
+
     async def collect(self, namespace: str | None = None) -> list[dict[str, Any]]:
         ns = namespace or self._settings.k8s_namespace
         try:

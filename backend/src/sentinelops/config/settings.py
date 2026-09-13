@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     app_cors_origins: str = "http://localhost:5173"
 
     # Database
-    postgres_host: str = "localhost"
+    postgres_host: str = "127.0.0.1"
     postgres_port: int = 5433
     postgres_user: str = "sentinelops"
     postgres_password: str = "sentinelops"
@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     database_url: str | None = None
 
     # Redis
-    redis_host: str = "localhost"
+    redis_host: str = "127.0.0.1"
     redis_port: int = 6380
     redis_db: int = 0
     redis_password: str = ""
@@ -70,23 +70,31 @@ class Settings(BaseSettings):
     # Kubernetes
     k8s_in_cluster: bool = False
     k8s_kubeconfig: str | None = None
-    k8s_namespace: str = "default"
+    k8s_namespace: str = "sentinelops-e2e"
     k8s_watch_timeout_seconds: int = 300
     k8s_collect_interval_seconds: int = 15
 
     # Prometheus / Loki
-    prometheus_url: str = "http://localhost:9090"
+    prometheus_url: str = "http://127.0.0.1:9090"
     prometheus_query_timeout_seconds: int = 30
-    loki_url: str = "http://localhost:3100"
+    loki_url: str = "http://127.0.0.1:3100"
     loki_query_timeout_seconds: int = 30
 
-    # Ollama
-    ollama_base_url: str = "http://localhost:11434"
+    # Ollama & RAG
+    ollama_base_url: str = "http://127.0.0.1:11434"
     ollama_model: str = "llama3.2"
     ollama_fallback_model: str = "qwen2.5:3b"
+    ollama_embedding_model: str = "nomic-embed-text"
     ollama_timeout_seconds: int = 120
     ollama_max_tokens: int = 2048
     ai_agent_concurrency: int = 3
+
+    # RAG Vector Store & Retrieval
+    rag_storage_dir: str = "data/rag_store"
+    rag_default_top_k: int = 4
+    rag_min_relevance_score: float = 0.15
+    rag_max_context_tokens: int = 2000
+    rag_embedding_batch_size: int = 16
 
     # Feature flags
     feature_nlp_assistant: bool = True

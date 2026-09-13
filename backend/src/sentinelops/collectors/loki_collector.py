@@ -1,5 +1,6 @@
 import re
-from datetime import datetime, timedelta
+import time
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import httpx
@@ -40,9 +41,12 @@ class LokiCollector:
             return self._demo_logs(ns)
 
     async def _query_loki(self, namespace: str) -> list[dict[str, Any]]:
-        end = datetime.utcnow()
-        start = self._last_query_end or (end - timedelta(minutes=5))
-        self._last_query_end = end
+        now_ts = time.time()
+        start_ts = now_ts - 300  # Default 5 min lookback window
+        if self._last_query_end is not None:
+            # Overlap by 10s to ensure no dropped events
+            start_ts = max(self._last_query_end - 10, now_ts - 3600)
+        self._last_query_end = now_ts
 
         ns_filter = f'{{namespace="{namespace}"}}' if namespace != "*" else '{namespace=~".+"}'
         query = f'{ns_filter} |~ "(?i)(error|exception|oom|crash|timeout|failed|panic)"'
@@ -50,8 +54,8 @@ class LokiCollector:
         url = f"{self._settings.loki_url.rstrip('/')}/loki/api/v1/query_range"
         params = {
             "query": query,
-            "start": str(int(start.timestamp() * 1e9)),
-            "end": str(int(end.timestamp() * 1e9)),
+            "start": str(int(start_ts * 1e9)),
+            "end": str(int(now_ts * 1e9)),
             "limit": self._settings.loki_query_limit,
         }
 

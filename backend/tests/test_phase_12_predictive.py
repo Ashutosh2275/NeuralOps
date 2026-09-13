@@ -114,7 +114,7 @@ class TestInfrastructureTimelineIntelligence:
             "id": incident_id,
             "root_service": "api-gateway",
             "affected_services": ["auth-service", "cache"],
-            "cascade_chain": json.dumps([root_incident_id]),
+            "cascade_chain": json.dumps([str(root_incident_id)]),
         }
 
         incident_history = [

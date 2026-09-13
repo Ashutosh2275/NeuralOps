@@ -1,0 +1,188 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: healthy-service
+  namespace: sentinelops-e2e
+  labels:
+    app: healthy-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: healthy-service
+  template:
+    metadata:
+      labels:
+        app: healthy-service
+    spec:
+      containers:
+      - name: app
+        image: busybox:1.36
+        command: ["sh", "-c", "while true; do echo 'healthy-service status=OK heartbeat' $(date); sleep 5; done"]
+        resources:
+          limits:
+            memory: "64Mi"
+            cpu: "100m"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: crashloop-service
+  namespace: sentinelops-e2e
+  labels:
+    app: crashloop-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: crashloop-service
+  template:
+    metadata:
+      labels:
+        app: crashloop-service
+    spec:
+      containers:
+      - name: app
+        image: busybox:1.36
+        command: ["sh", "-c", "echo 'Starting crashloop-service...'; echo 'FATAL: NullPointerException in TransactionRouter: unable to bind port 8080'; sleep 1; exit 1"]
+        resources:
+          limits:
+            memory: "64Mi"
+            cpu: "100m"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oom-service
+  namespace: sentinelops-e2e
+  labels:
+    app: oom-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: oom-service
+  template:
+    metadata:
+      labels:
+        app: oom-service
+    spec:
+      containers:
+      - name: app
+        image: busybox:1.36
+        command: ["sh", "-c", "echo 'Triggering cgroup OOM termination'; awk 'BEGIN { while(1) { s=s \"0123456789012345678901234567890123456789\"; arr[i++]=s; } }'"]
+        resources:
+          limits:
+            memory: "16Mi"
+            cpu: "100m"
+          requests:
+            memory: "8Mi"
+            cpu: "50m"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-db
+  namespace: sentinelops-e2e
+  labels:
+    app: payment-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: payment-db
+  template:
+    metadata:
+      labels:
+        app: payment-db
+    spec:
+      containers:
+      - name: db
+        image: busybox:1.36
+        command: ["sh", "-c", "echo 'payment-db operational on port 5432'; while true; do sleep 5; done"]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-service
+  namespace: sentinelops-e2e
+  labels:
+    app: payment-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: payment-service
+  template:
+    metadata:
+      labels:
+        app: payment-service
+    spec:
+      containers:
+      - name: app
+        image: busybox:1.36
+        command: ["sh", "-c", "while true; do echo 'payment-service ready; processing payment batch'; sleep 3; done"]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: checkout-service
+  namespace: sentinelops-e2e
+  labels:
+    app: checkout-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: checkout-service
+  template:
+    metadata:
+      labels:
+        app: checkout-service
+    spec:
+      containers:
+      - name: app
+        image: busybox:1.36
+        command: ["sh", "-c", "while true; do echo 'checkout-service active; forwarding checkouts to payment-service'; sleep 3; done"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-db
+  namespace: sentinelops-e2e
+  labels:
+    app: payment-db
+spec:
+  ports:
+  - port: 5432
+    targetPort: 5432
+  selector:
+    app: payment-db
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-service
+  namespace: sentinelops-e2e
+  labels:
+    app: payment-service
+spec:
+  ports:
+  - port: 8080
+    targetPort: 8080
+  selector:
+    app: payment-service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: checkout-service
+  namespace: sentinelops-e2e
+  labels:
+    app: checkout-service
+spec:
+  ports:
+  - port: 8080
+    targetPort: 8080
+  selector:
+    app: checkout-service

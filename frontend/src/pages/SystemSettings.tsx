@@ -1,239 +1,395 @@
-import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { useSettings, PlatformSettings } from "../contexts/SettingsContext";
-import {
-  Palette, Zap, Wifi, Brain, Film, RotateCcw, Save,
-  Check, ChevronRight, Monitor, Sliders, Cpu
-} from "lucide-react";
+import React, { useState, useEffect } from 'react';
+import { 
+  Settings as SettingsIcon, 
+  Cpu, 
+  Server, 
+  ShieldCheck, 
+  Database, 
+  CheckCircle2, 
+  AlertCircle, 
+  RefreshCw, 
+  Terminal,
+  Activity,
+  Layers,
+  Key,
+  Lock,
+  Trash2,
+} from 'lucide-react';
+import { api, type SystemInfo, type HealthResponse } from '../lib/api';
+import { usePlatform } from '../contexts/PlatformContext';
 
-// ── Section definitions ─────────────────────────────────────────────────────
-type SectionId = "theme" | "performance" | "websocket" | "ai" | "replay";
+export const SystemSettings: React.FC = () => {
+  const { currentRole, currentUser } = usePlatform();
+  const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
+  const [health, setHealth] = useState<HealthResponse | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [testingDiagnostics, setTestingDiagnostics] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
-const SECTIONS: { id: SectionId; label: string; icon: React.ReactNode; color: string }[] = [
-  { id: "theme",       label: "Theme & Visuals",   icon: <Palette className="w-4 h-4" />,  color: "text-sentinel-accent" },
-  { id: "performance", label: "Performance",        icon: <Zap className="w-4 h-4" />,      color: "text-yellow-400"      },
-  { id: "websocket",   label: "WebSocket",          icon: <Wifi className="w-4 h-4" />,     color: "text-blue-400"        },
-  { id: "ai",          label: "AI Settings",        icon: <Brain className="w-4 h-4" />,    color: "text-purple-400"      },
-  { id: "replay",      label: "Replay & Demo",      icon: <Film className="w-4 h-4" />,     color: "text-orange-400"      },
-];
+  // Retention cleanup state
+  const [retentionDryRun, setRetentionDryRun] = useState<boolean>(true);
+  const [cleaningRetention, setCleaningRetention] = useState<boolean>(false);
+  const [retentionResult, setRetentionResult] = useState<any>(null);
+  const [retentionError, setRetentionError] = useState<string | null>(null);
 
-// ── Reusable controls ──────────────────────────────────────────────────────
-function Toggle({ value, onChange, label, sub }: { value: boolean; onChange: (v: boolean) => void; label: string; sub?: string }) {
-  return (
-    <div className="flex items-center justify-between py-3 border-b border-sentinel-700/20 last:border-0">
-      <div>
-        <p className="text-sm font-display text-white font-medium">{label}</p>
-        {sub && <p className="text-[10px] font-mono text-gray-600 mt-0.5">{sub}</p>}
-      </div>
-      <button
-        onClick={() => onChange(!value)}
-        className={`relative w-11 h-6 rounded-full transition-all duration-300 shrink-0 ${value ? "bg-sentinel-accent/80" : "bg-sentinel-800"}`}
-        style={{ boxShadow: value ? "0 0 12px rgba(34,211,238,0.4)" : "none" }}
-      >
-        <motion.div animate={{ x: value ? 22 : 2 }} transition={{ type: "spring", stiffness: 500, damping: 30 }}
-          className="absolute top-1 w-4 h-4 rounded-full bg-white shadow-md" />
-      </button>
-    </div>
-  );
-}
-
-function RangeSlider({ value, onChange, label, sub, min, max, unit }: {
-  value: number; onChange: (v: number) => void; label: string; sub?: string; min: number; max: number; unit?: string;
-}) {
-  return (
-    <div className="py-3 border-b border-sentinel-700/20 last:border-0">
-      <div className="flex items-center justify-between mb-2">
-        <div>
-          <p className="text-sm font-display text-white font-medium">{label}</p>
-          {sub && <p className="text-[10px] font-mono text-gray-600 mt-0.5">{sub}</p>}
-        </div>
-        <span className="text-sm font-display font-bold text-sentinel-accent tabular-nums">{value}{unit ?? "%"}</span>
-      </div>
-      <input type="range" min={min} max={max} value={value} onChange={e => onChange(Number(e.target.value))}
-        className="w-full accent-cyan-400" />
-    </div>
-  );
-}
-
-// ── Section content ────────────────────────────────────────────────────────
-function ThemeSection({ settings, set }: { settings: PlatformSettings; set: <K extends keyof PlatformSettings>(k: K, v: PlatformSettings[K]) => void }) {
-  return (
-    <div className="space-y-0">
-      <Toggle value={settings.scanlines}   onChange={v => set("scanlines", v)}   label="Scanlines"     sub="CRT scanline overlay for cinematic effect" />
-      <Toggle value={settings.cyberGrid}   onChange={v => set("cyberGrid", v)}   label="Cyber Grid"    sub="Background dot-grid pattern" />
-      <Toggle value={settings.glowEffects} onChange={v => set("glowEffects", v)} label="Glow Effects"  sub="Neon glow on nodes, cards, and buttons" />
-      <Toggle value={settings.particleFlow}onChange={v => set("particleFlow", v)}label="Particle Flow" sub="Animated packet particles on topology edges" />
-      <Toggle value={settings.animations}  onChange={v => set("animations", v)}  label="Animations"    sub="Framer Motion transitions and micro-interactions" />
-      <RangeSlider value={settings.glowIntensity} onChange={v => set("glowIntensity", v)} label="Glow Intensity" sub="Controls neon glow brightness globally" min={0} max={100} />
-      <RangeSlider value={settings.animSpeed}     onChange={v => set("animSpeed", v)}     label="Animation Speed" sub="Higher = faster transitions"             min={20} max={150} />
-    </div>
-  );
-}
-
-function PerformanceSection({ settings, set }: { settings: PlatformSettings; set: <K extends keyof PlatformSettings>(k: K, v: PlatformSettings[K]) => void }) {
-  return (
-    <div>
-      <RangeSlider value={settings.d3Quality} onChange={v => set("d3Quality", v)} label="D3 Render Quality" sub="Higher quality = more CPU usage in topology" min={20} max={100} />
-      <div className="mt-4 p-3 rounded-lg bg-yellow-500/5 border border-yellow-500/20">
-        <p className="text-[10px] font-mono text-yellow-400 uppercase tracking-widest mb-1">Performance Mode</p>
-        <p className="text-[10px] font-mono text-gray-500">Set D3 quality ≤ 50 for smoother rendering on lower-end hardware. Topology node count remains unchanged.</p>
-      </div>
-    </div>
-  );
-}
-
-function WebSocketSection({ settings, set }: { settings: PlatformSettings; set: <K extends keyof PlatformSettings>(k: K, v: PlatformSettings[K]) => void }) {
-  return (
-    <div>
-      <Toggle value={settings.wsReconnect} onChange={v => set("wsReconnect", v)} label="Auto Reconnect" sub="Automatically reconnect on connection loss" />
-      <Toggle value={settings.wsDebug}     onChange={v => set("wsDebug", v)}     label="Debug Mode"     sub="Log all WebSocket messages to console" />
-      <RangeSlider value={settings.wsRateLimit} onChange={v => set("wsRateLimit", v)} label="Rate Limit" sub="Max messages per second processed from stream" min={10} max={500} unit="/s" />
-    </div>
-  );
-}
-
-function AISection({ settings, set }: { settings: PlatformSettings; set: <K extends keyof PlatformSettings>(k: K, v: PlatformSettings[K]) => void }) {
-  return (
-    <div>
-      <Toggle value={settings.autoRemediation} onChange={v => set("autoRemediation", v)} label="Autonomous Remediation" sub="Allow AI to execute kubectl commands automatically" />
-      <RangeSlider value={settings.aiConfThreshold} onChange={v => set("aiConfThreshold", v)} label="Confidence Threshold" sub="Minimum AI confidence required to trigger remediation" min={50} max={99} />
-      <RangeSlider value={settings.maxReasoning}    onChange={v => set("maxReasoning", v)}    label="Max Reasoning Log"   sub="Maximum entries retained in the cognitive stream"     min={10} max={200} unit=" entries" />
-    </div>
-  );
-}
-
-function ReplaySection({ settings, set }: { settings: PlatformSettings; set: <K extends keyof PlatformSettings>(k: K, v: PlatformSettings[K]) => void }) {
-  return (
-    <div>
-      <Toggle value={settings.replayAutoplay}   onChange={v => set("replayAutoplay", v)}   label="Auto-play Replay"     sub="Begin replay automatically when opened" />
-      <Toggle value={settings.replayCinematic}  onChange={v => set("replayCinematic", v)}  label="Cinematic Mode"       sub="Dramatic camera movements and transitions during replay" />
-      <RangeSlider value={settings.replaySpeed} onChange={v => set("replaySpeed", v)}      label="Replay Speed" sub="Default playback speed (100 = 1×, 200 = 2×)" min={25} max={400} unit="%" />
-    </div>
-  );
-}
-
-// ── Main page ──────────────────────────────────────────────────────────────
-export default function SystemSettings() {
-  const { settings, set, reset } = useSettings();
-  const [active, setActive] = useState<SectionId>("theme");
-  const [saved, setSaved] = useState(false);
-
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
-  };
-
-  const renderSection = () => {
-    switch (active) {
-      case "theme":       return <ThemeSection settings={settings} set={set} />;
-      case "performance": return <PerformanceSection settings={settings} set={set} />;
-      case "websocket":   return <WebSocketSection settings={settings} set={set} />;
-      case "ai":          return <AISection settings={settings} set={set} />;
-      case "replay":      return <ReplaySection settings={settings} set={set} />;
+  const fetchSystemData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [infoRes, healthRes] = await Promise.all([
+        api.systemInfo(),
+        api.health(),
+      ]);
+      setSystemInfo(infoRes);
+      setHealth(healthRes);
+    } catch (err: any) {
+      console.error('Failed to load system settings:', err);
+      setError(err.message || 'Failed to retrieve platform configuration');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const activeSection = SECTIONS.find(s => s.id === active)!;
+  useEffect(() => {
+    fetchSystemData();
+  }, []);
+
+  const runDiagnostics = async () => {
+    setTestingDiagnostics(true);
+    try {
+      const healthRes = await api.health();
+      setHealth(healthRes);
+    } catch (err: any) {
+      console.error('Diagnostics check failed:', err);
+    } finally {
+      setTestingDiagnostics(false);
+    }
+  };
 
   return (
-    <div className="h-full flex flex-col gap-6">
+    <div className="space-y-6">
       {/* Header */}
-      <header className="flex items-end justify-between">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-gray-500/10 border border-gray-500/30 rounded-xl flex items-center justify-center">
-            <Sliders className="w-6 h-6 text-gray-400" />
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-border pb-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <SettingsIcon className="h-6 w-6 text-primary" />
+            <h1 className="text-2xl font-bold text-foreground tracking-tight">Platform Configuration & System Health</h1>
           </div>
-          <div>
-            <h1 className="page-title">System Settings</h1>
-            <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest mt-1">
-              Platform configuration · UI customization · Demo controls
-            </p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Real environment configuration, AI runtime models, cluster endpoints, and zero-trust security parameters.
+          </p>
+        </div>
+        <button
+          onClick={runDiagnostics}
+          disabled={testingDiagnostics}
+          className="flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 shadow-sm"
+        >
+          <Activity className={`h-3.5 w-3.5 ${testingDiagnostics ? 'animate-spin' : ''}`} />
+          Run Live Diagnostics
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="p-16 text-center text-sm text-muted-foreground flex flex-col items-center gap-3">
+          <RefreshCw className="h-6 w-6 animate-spin text-primary" />
+          <span>Retrieving system settings from backend...</span>
+        </div>
+      ) : error ? (
+        <div className="p-8 text-center text-sm text-destructive flex flex-col items-center gap-2">
+          <AlertCircle className="h-6 w-6" />
+          <span>{error}</span>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {/* Subsystem Health Status Grid */}
+          <div className="bg-card border border-border rounded-lg p-5 shadow-sm space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <Activity className="h-4 w-4 text-primary" />
+                Live Subsystem Health Probes ({health?.status || 'UNKNOWN'})
+              </h2>
+              <span className="text-[11px] font-mono text-muted-foreground">
+                Checked: {health?.timestamp ? new Date(health.timestamp).toLocaleTimeString() : 'N/A'}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-3">
+              {health && Object.entries(health.dependencies || {}).map(([name, dep]: [string, any]) => {
+                const statusStr = typeof dep === 'string' ? dep : dep?.status || 'unknown';
+                const isHealthy = statusStr === 'healthy';
+                const latency = typeof dep === 'object' && dep?.latency_ms !== undefined ? `${dep.latency_ms.toFixed(1)}ms` : 'active';
+                return (
+                  <div key={name} className="p-3 bg-muted/30 border border-border rounded-md text-center space-y-1">
+                    <div className="text-[10px] font-mono uppercase text-muted-foreground truncate">{name}</div>
+                    <div className="flex items-center justify-center gap-1">
+                      <span className={`w-2 h-2 rounded-full ${isHealthy ? 'bg-emerald-500' : 'bg-destructive'}`} />
+                      <span className="text-xs font-bold font-mono uppercase text-foreground">{statusStr}</span>
+                    </div>
+                    <div className="text-[10px] font-mono text-muted-foreground">{latency}</div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <button onClick={reset}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl glass-panel border border-sentinel-700/50 text-gray-400 hover:text-white hover:border-sentinel-accent/30 text-xs font-mono uppercase tracking-widest transition-all">
-            <RotateCcw className="w-3.5 h-3.5" /> Reset Defaults
-          </button>
-          <motion.button onClick={handleSave} whileTap={{ scale: 0.96 }}
-            className="flex items-center gap-2 px-5 py-2 rounded-xl bg-sentinel-accent/20 border border-sentinel-accent/40 text-sentinel-accent text-xs font-mono uppercase tracking-widest hover:bg-sentinel-accent/30 transition-all"
-            style={{ boxShadow: "0 0 16px rgba(34,211,238,0.15)" }}>
-            {saved ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Save className="w-3.5 h-3.5" />}
-            {saved ? "Saved!" : "Save Settings"}
-          </motion.button>
-        </div>
-      </header>
 
-      <div className="grid grid-cols-12 gap-6 flex-1 min-h-0">
-        {/* Sidebar nav */}
-        <div className="col-span-3 space-y-1">
-          {SECTIONS.map(section => (
-            <button key={section.id} onClick={() => setActive(section.id)}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200 ${active === section.id
-                ? "glass-panel border border-sentinel-accent/25 bg-sentinel-accent/5"
-                : "hover:bg-white/3 border border-transparent"
-              }`}>
-              <span className={active === section.id ? "text-sentinel-accent" : section.color + " opacity-50"}>
-                {section.icon}
-              </span>
-              <span className={`text-xs font-display font-semibold ${active === section.id ? "text-white" : "text-gray-500"}`}>
-                {section.label}
-              </span>
-              {active === section.id && <ChevronRight className="w-3 h-3 text-sentinel-accent ml-auto" />}
-            </button>
-          ))}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* AI Engine Configuration */}
+            <div className="bg-card border border-border rounded-lg p-5 shadow-sm space-y-4">
+              <div className="flex items-center gap-2 border-b border-border pb-3">
+                <Cpu className="h-4 w-4 text-primary" />
+                <h3 className="text-sm font-semibold text-foreground">AI Engine & Local LLM Runtime</h3>
+              </div>
 
-          {/* Live status indicators */}
-          <div className="mt-6 p-4 rounded-xl glass-panel border border-sentinel-700/30">
-            <p className="text-[9px] font-mono text-gray-600 uppercase tracking-widest mb-3">Live Overrides</p>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-[9px] font-mono">
-                <span className="text-gray-600">Scanlines</span>
-                <span className={settings.scanlines ? "text-green-400" : "text-gray-600"}>
-                  {settings.scanlines ? "ON" : "OFF"}
+              <div className="space-y-2.5 text-xs font-mono">
+                <div className="flex justify-between py-1.5 border-b border-border/50">
+                  <span className="text-muted-foreground">Provider:</span>
+                  <span className="font-semibold text-foreground">{systemInfo?.ai_engine?.provider || 'Ollama (Local)'}</span>
+                </div>
+                <div className="flex justify-between py-1.5 border-b border-border/50">
+                  <span className="text-muted-foreground">LLM Model:</span>
+                  <span className="font-semibold text-primary">{systemInfo?.ai_engine?.llm_model || 'llama3.2'}</span>
+                </div>
+                <div className="flex justify-between py-1.5 border-b border-border/50">
+                  <span className="text-muted-foreground">Embedding Model:</span>
+                  <span className="font-semibold text-primary">{systemInfo?.ai_engine?.embedding_model || 'nomic-embed-text'}</span>
+                </div>
+                <div className="flex justify-between py-1.5 border-b border-border/50">
+                  <span className="text-muted-foreground">Embedding Dimension:</span>
+                  <span className="text-foreground">768-dim (dense vectors)</span>
+                </div>
+                <div className="flex justify-between py-1.5 border-b border-border/50">
+                  <span className="text-muted-foreground">Context Window:</span>
+                  <span className="text-foreground">{systemInfo?.ai_engine?.context_length || 4096} tokens</span>
+                </div>
+                <div className="flex justify-between py-1.5">
+                  <span className="text-muted-foreground">Hardware Acceleration:</span>
+                  <span className="text-emerald-500 font-semibold">{systemInfo?.ai_engine?.gpu_acceleration || 'CUDA (RTX 3050 Ti Laptop GPU)'}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Infrastructure Endpoints */}
+            <div className="bg-card border border-border rounded-lg p-5 shadow-sm space-y-4">
+              <div className="flex items-center gap-2 border-b border-border pb-3">
+                <Server className="h-4 w-4 text-primary" />
+                <h3 className="text-sm font-semibold text-foreground">Connected Infrastructure</h3>
+              </div>
+
+              <div className="space-y-2.5 text-xs font-mono">
+                <div className="flex justify-between py-1.5 border-b border-border/50">
+                  <span className="text-muted-foreground">Kubernetes Cluster:</span>
+                  <span className="text-foreground truncate max-w-[240px]" title={systemInfo?.infrastructure?.kubernetes_endpoint}>
+                    {systemInfo?.infrastructure?.kubernetes_endpoint || 'k3s v1.31.5'}
+                  </span>
+                </div>
+                <div className="flex justify-between py-1.5 border-b border-border/50">
+                  <span className="text-muted-foreground">Target Namespace:</span>
+                  <span className="text-foreground">{systemInfo?.platform?.namespace || 'sentinelops-e2e'}</span>
+                </div>
+                <div className="flex justify-between py-1.5 border-b border-border/50">
+                  <span className="text-muted-foreground">Prometheus Endpoint:</span>
+                  <span className="text-foreground">{systemInfo?.infrastructure?.prometheus_url || 'http://127.0.0.1:9090'}</span>
+                </div>
+                <div className="flex justify-between py-1.5 border-b border-border/50">
+                  <span className="text-muted-foreground">Loki Log Engine:</span>
+                  <span className="text-foreground">{systemInfo?.infrastructure?.loki_url || 'http://127.0.0.1:3100'}</span>
+                </div>
+                <div className="flex justify-between py-1.5 border-b border-border/50">
+                  <span className="text-muted-foreground">Redis Streams:</span>
+                  <span className="text-foreground">{systemInfo?.infrastructure?.redis_host || '127.0.0.1:6380'}</span>
+                </div>
+                <div className="flex justify-between py-1.5">
+                  <span className="text-muted-foreground">PostgreSQL DB:</span>
+                  <span className="text-foreground">{systemInfo?.infrastructure?.postgres_host || '127.0.0.1:5433 (sentinelops_dev)'}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Zero-Trust Security & RBAC Governance */}
+            <div className="bg-card border border-border rounded-lg p-5 shadow-sm space-y-4">
+              <div className="flex items-center gap-2 border-b border-border pb-3">
+                <ShieldCheck className="h-4 w-4 text-primary" />
+                <h3 className="text-sm font-semibold text-foreground">Zero-Trust Security & Governance</h3>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-2.5 bg-muted/30 rounded border border-border">
+                  <div>
+                    <div className="text-xs font-semibold text-foreground">Zero-Trust Tool Enclave</div>
+                    <div className="text-[11px] text-muted-foreground">Restricts all agent tool calls to strict READ_ONLY whitelist</div>
+                  </div>
+                  <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 font-semibold">
+                    ACTIVE
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between p-2.5 bg-muted/30 rounded border border-border">
+                  <div>
+                    <div className="text-xs font-semibold text-foreground">Automatic Secret Redactor</div>
+                    <div className="text-[11px] text-muted-foreground">Strips JWTs, API tokens, passwords, and private keys from prompts & logs</div>
+                  </div>
+                  <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 font-semibold">
+                    ACTIVE
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between p-2.5 bg-muted/30 rounded border border-border">
+                  <div>
+                    <div className="text-xs font-semibold text-foreground">Human-in-the-Loop Remediation</div>
+                    <div className="text-[11px] text-muted-foreground">Requires operator confirmation before executing corrective actions</div>
+                  </div>
+                  <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/20 font-semibold">
+                    REQUIRED
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Platform Runtime Information */}
+            <div className="bg-card border border-border rounded-lg p-5 shadow-sm space-y-4">
+              <div className="flex items-center gap-2 border-b border-border pb-3">
+                <Terminal className="h-4 w-4 text-primary" />
+                <h3 className="text-sm font-semibold text-foreground">Platform Runtime Details</h3>
+              </div>
+
+              <div className="space-y-2.5 text-xs font-mono">
+                <div className="flex justify-between py-1.5 border-b border-border/50">
+                  <span className="text-muted-foreground">Platform Name:</span>
+                  <span className="text-foreground font-semibold">SentinelOps AI Enterprise</span>
+                </div>
+                <div className="flex justify-between py-1.5 border-b border-border/50">
+                  <span className="text-muted-foreground">Release Version:</span>
+                  <span className="text-foreground">{systemInfo?.platform?.version || '1.0.0-prod'}</span>
+                </div>
+                <div className="flex justify-between py-1.5 border-b border-border/50">
+                  <span className="text-muted-foreground">Environment:</span>
+                  <span className="text-foreground capitalize">{systemInfo?.platform?.environment || 'production'}</span>
+                </div>
+                <div className="flex justify-between py-1.5 border-b border-border/50">
+                  <span className="text-muted-foreground">Operator Session:</span>
+                  <span className="text-primary font-semibold font-mono">
+                    {currentUser ? `${currentUser.username} (${currentUser.user_id})` : 'operator (usr-op)'}
+                  </span>
+                </div>
+                <div className="flex justify-between py-1.5 border-b border-border/50">
+                  <span className="text-muted-foreground">Active Role:</span>
+                  <span className={`font-semibold uppercase ${
+                    currentRole === 'admin' ? 'text-amber-400' : currentRole === 'operator' ? 'text-emerald-400' : 'text-sky-400'
+                  }`}>
+                    {currentRole} {currentRole === 'admin' ? '(Full Governance)' : currentRole === 'operator' ? '(Actions & Tools)' : '(Read Only)'}
+                  </span>
+                </div>
+                <div className="flex justify-between py-1.5">
+                  <span className="text-muted-foreground">Audit Retention:</span>
+                  <span className="text-foreground">90 days (persistent disk logging)</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Admin Data Retention Policy Governance Panel */}
+            <div className="bg-card border border-border rounded-lg p-5 shadow-sm space-y-4 md:col-span-2">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-border pb-3">
+                <div className="flex items-center gap-2">
+                  <Trash2 className="h-4 w-4 text-primary" />
+                  <h3 className="text-sm font-semibold text-foreground">Data Retention & Purge Policy Management</h3>
+                </div>
+                <span className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold uppercase ${
+                  currentRole === 'admin'
+                    ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                    : 'bg-muted text-muted-foreground border border-border'
+                }`}>
+                  {currentRole === 'admin' ? 'Admin Authorized' : 'Admin Role Required'}
                 </span>
               </div>
-              <div className="flex items-center justify-between text-[9px] font-mono">
-                <span className="text-gray-600">Glow</span>
-                <span className={settings.glowEffects ? "text-cyan-400" : "text-gray-600"}>
-                  {settings.glowEffects ? `${settings.glowIntensity}%` : "OFF"}
-                </span>
+
+              <p className="text-xs text-muted-foreground">
+                Enforce platform data retention limits across historical investigations and persistent audit logs.
+                Viewer and Operator roles are restricted from executing purges.
+              </p>
+
+              <div className="flex flex-wrap items-center gap-4 pt-1">
+                <label className="flex items-center gap-2 text-xs font-mono text-foreground cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={retentionDryRun}
+                    onChange={(e) => setRetentionDryRun(e.target.checked)}
+                    className="rounded border-border text-primary focus:ring-primary h-4 w-4 bg-muted"
+                  />
+                  <span>Dry Run (Simulate purge without deleting records)</span>
+                </label>
+
+                {currentRole === 'admin' ? (
+                  <button
+                    onClick={async () => {
+                      setCleaningRetention(true);
+                      setRetentionError(null);
+                      try {
+                        const res = await api.retentionCleanup(retentionDryRun);
+                        setRetentionResult(res);
+                      } catch (err: any) {
+                        setRetentionError(err.message || 'Failed to execute retention policy');
+                      } finally {
+                        setCleaningRetention(false);
+                      }
+                    }}
+                    disabled={cleaningRetention}
+                    data-testid="execute-retention-btn"
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded bg-amber-600 hover:bg-amber-500 text-white transition disabled:opacity-50 font-mono shadow-sm"
+                  >
+                    <Trash2 className={`h-3.5 w-3.5 ${cleaningRetention ? 'animate-spin' : ''}`} />
+                    <span>{cleaningRetention ? 'Executing...' : retentionDryRun ? 'Execute Retention (Dry Run)' : 'Execute Live Purge'}</span>
+                  </button>
+                ) : (
+                  <div className="relative group">
+                    <button
+                      disabled
+                      data-testid="execute-retention-btn"
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded bg-slate-800 text-gray-500 border border-slate-700 cursor-not-allowed opacity-70 font-mono"
+                      title="Requires Admin role to execute retention policy"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      <span>Execute Retention (Admin Only)</span>
+                    </button>
+                    <span className="hidden group-hover:block absolute left-0 top-full mt-1.5 z-30 px-2 py-1 text-[10px] font-mono bg-slate-900 border border-slate-700 text-amber-300 rounded shadow whitespace-nowrap">
+                      Requires Admin role to execute retention cleanup
+                    </span>
+                  </div>
+                )}
               </div>
-              <div className="flex items-center justify-between text-[9px] font-mono">
-                <span className="text-gray-600">Auto-remediation</span>
-                <span className={settings.autoRemediation ? "text-green-400" : "text-red-400"}>
-                  {settings.autoRemediation ? "ENABLED" : "DISABLED"}
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-[9px] font-mono">
-                <span className="text-gray-600">AI Confidence</span>
-                <span className="text-purple-400">{settings.aiConfThreshold}%</span>
-              </div>
+
+              {retentionError && (
+                <div className="p-3 rounded bg-destructive/10 border border-destructive/20 text-xs text-destructive flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  <span>{retentionError}</span>
+                </div>
+              )}
+
+              {retentionResult && (
+                <div className="p-3 rounded bg-muted/40 border border-border text-xs font-mono space-y-2 mt-2">
+                  <div className="flex items-center justify-between font-bold text-foreground">
+                    <span>Execution Report (Dry Run: {String(retentionResult.dry_run)})</span>
+                    <span className="text-emerald-400">Success</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <div className="p-2 bg-card rounded border border-border">
+                      <div className="text-muted-foreground text-[10px] uppercase">Investigations</div>
+                      <div className="text-foreground mt-0.5">
+                        Scanned: {retentionResult.investigations?.scanned || 0} | Expired: {retentionResult.investigations?.expired || 0} | Deleted: {retentionResult.investigations?.deleted || 0}
+                      </div>
+                    </div>
+                    <div className="p-2 bg-card rounded border border-border">
+                      <div className="text-muted-foreground text-[10px] uppercase">Audit Trail</div>
+                      <div className="text-foreground mt-0.5">
+                        Scanned: {retentionResult.audit_trail?.scanned || 0} | Expired: {retentionResult.audit_trail?.expired || 0} | Deleted: {retentionResult.audit_trail?.deleted || 0}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
-
-        {/* Settings content */}
-        <div className="col-span-9">
-          <AnimatePresence mode="wait">
-            <motion.div key={active} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -10 }} transition={{ duration: 0.2 }}
-              className="glass-panel rounded-xl border border-sentinel-700/40 overflow-hidden h-full">
-              {/* Section header */}
-              <div className="px-6 py-4 border-b border-sentinel-700/40 flex items-center gap-3">
-                <span className={activeSection.color}>{activeSection.icon}</span>
-                <h2 className="text-sm font-display font-bold text-white">{activeSection.label}</h2>
-                <span className="text-[9px] font-mono text-gray-600 ml-2 uppercase tracking-widest">
-                  Changes apply instantly · Persisted to localStorage
-                </span>
-              </div>
-              <div className="px-6 py-2 overflow-y-auto h-full">
-                {renderSection()}
-              </div>
-            </motion.div>
-          </AnimatePresence>
-        </div>
-      </div>
+      )}
     </div>
   );
-}
+};

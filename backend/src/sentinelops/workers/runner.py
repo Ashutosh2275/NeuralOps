@@ -17,6 +17,7 @@ from sentinelops.streams.bus import EventBus
 from sentinelops.websocket.hub import ws_hub
 
 log = get_logger(__name__)
+from sentinelops.engines.correlation import CorrelationEngine
 DEFAULT_CLUSTER_ID = UUID("00000000-0000-0000-0000-000000000001")
 
 
@@ -27,6 +28,7 @@ class WorkerRunner:
         self._collector = get_event_collector(self._bus)
         self._orchestrator = AgentOrchestrator()
         self._ai_orchestrator = AIOrchestrator()
+        self._correlation_engine = CorrelationEngine(settings=self._settings)
         self._event_buffer: dict[str, list[BaseEvent]] = {}
         self._shutdown = False
 
@@ -51,6 +53,13 @@ class WorkerRunner:
                 "namespace": event.namespace,
                 "severity": event.severity.value,
             })
+            try:
+                corr_events = self._correlation_engine.ingest(event)
+                for corr in corr_events:
+                    await self._bus.publisher.publish(self._settings.stream_correlation, corr)
+                    log.info("correlation_event_published", correlation_id=str(corr.correlation_id), trigger=corr.payload.get("trigger"))
+            except Exception as e:
+                log.warning("correlation_ingest_failed", error=str(e))
 
         await self._bus.consumer.consume(
             self._settings.stream_events_raw,
@@ -67,6 +76,13 @@ class WorkerRunner:
                 "type": event.payload.get("anomaly_type"),
                 "severity": event.severity.value,
             })
+            try:
+                corr_events = self._correlation_engine.ingest(event)
+                for corr in corr_events:
+                    await self._bus.publisher.publish(self._settings.stream_correlation, corr)
+                    log.info("correlation_event_published_from_anomaly", correlation_id=str(corr.correlation_id), trigger=corr.payload.get("trigger"))
+            except Exception as e:
+                log.warning("correlation_anomaly_ingest_failed", error=str(e))
 
         await self._bus.consumer.consume(
             self._settings.stream_anomaly_events,

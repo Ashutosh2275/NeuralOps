@@ -60,6 +60,7 @@ class ReplayEngine:
             )
             session.add(frame)
             persisted.append(frame)
+            await session.flush()
 
             for ev_data in frame_data.get("events", []):
                 replay_ev = ReplayEvent(

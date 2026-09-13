@@ -21,6 +21,6 @@ async def nlp_query(
     result = await service.query(body.question, body.namespace)
     return NLPQueryResponse(
         question=result["question"],
-        answer=result["answer"],
+        answer=result.get("answer") or "No answer generated.",
         sources=result.get("sources", []),
     )

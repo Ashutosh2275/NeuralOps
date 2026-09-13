@@ -5,7 +5,7 @@ def write_file(path, content):
     with open(path, 'w', encoding='utf-8') as f:
         f.write(content.strip() + "\n")
 
-root = 'c:/Users/ASUS/Desktop/NeuralOps/backend/src/sentinelops'
+root = 'c:/Users/ASUS/Desktop/NetraAI/backend/src/sentinelops'
 
 # System 12
 write_file(f'{root}/websocket/websocket_security.py', '''
@@ -111,7 +111,7 @@ class AIScheduler:
 ''')
 
 # System 14 - Validation Suite
-scripts = 'c:/Users/ASUS/Desktop/NeuralOps/scripts'
+scripts = 'c:/Users/ASUS/Desktop/NetraAI/scripts'
 val_content = '''import sys
 print("Validation complete.")
 sys.exit(0)

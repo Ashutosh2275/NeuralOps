@@ -70,3 +70,27 @@ async def replay_incident(
         "timeline": replay.get_timeline(incident_id),
         "frames": replay.build_replay_frames(incident_id),
     }
+
+
+@router.post("/{incident_id}/acknowledge", summary="Acknowledge incident by operator")
+async def acknowledge_incident(
+    incident_id: UUID,
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    service = IncidentService(session)
+    incident = await service.acknowledge(incident_id)
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
+    return {"incident_id": str(incident.id), "status": incident.status, "message": "Incident acknowledged"}
+
+
+@router.post("/{incident_id}/resolve", summary="Mark incident as resolved")
+async def resolve_incident(
+    incident_id: UUID,
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    service = IncidentService(session)
+    incident = await service.resolve(incident_id)
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
+    return {"incident_id": str(incident.id), "status": incident.status, "message": "Incident resolved"}

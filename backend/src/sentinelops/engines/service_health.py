@@ -241,7 +241,9 @@ class EnterpriseServiceHealthScoring:
                 "cluster_id": str(cluster_id),
                 "risk_index": 0.5,
                 "services_at_risk": 0,
+                "at_risk_count": 0,
                 "critical_services": 0,
+                "critical_count": 0,
             }
 
         # Count at-risk services
@@ -256,7 +258,9 @@ class EnterpriseServiceHealthScoring:
             "cluster_id": str(cluster_id),
             "risk_index": min(1.0, risk_index),
             "services_at_risk": at_risk,
+            "at_risk_count": at_risk,
             "critical_services": critical,
+            "critical_count": critical,
             "average_service_health": round(avg_health, 3),
         }
 

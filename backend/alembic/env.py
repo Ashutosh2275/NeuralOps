@@ -8,15 +8,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from sentinelops.config import get_settings
 from sentinelops.core.database import Base
-from sentinelops.models import (  # noqa: F401 — register models
-    cluster,
-    dependency,
-    incident,
-    intelligence,
-    pod,
-    recommendation,
-    service,
-)
+from sentinelops import models  # noqa: F401 — register all models
 
 config = context.config
 if config.config_file_name is not None:

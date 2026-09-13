@@ -4,7 +4,7 @@
 
 set -e
 
-PROJECT_ROOT="/c/Users/ASUS/Desktop/NeuralOps"
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKEND_PORT="8000"
 FRONTEND_PORT="5173"
 
@@ -19,15 +19,15 @@ NC='\033[0m' # No Color
 
 # Check if Docker is running
 if ! command -v docker &> /dev/null; then
-    echo -e "${YELLOW}⚠️  Docker not found. Attempting to start Docker...${NC}"
+    echo -e "${YELLOW}⚠️  Docker not found. Ensure required services are running locally.${NC}"
 fi
 
 # Check if PostgreSQL is accessible
 echo -e "${BLUE}[1/5]${NC} Checking PostgreSQL connection..."
-if psql -U neuralops sentinelops -c "SELECT 1" > /dev/null 2>&1; then
+if psql -U sentinelops sentinelops -c "SELECT 1" > /dev/null 2>&1; then
     echo -e "${GREEN}✅ PostgreSQL connected${NC}"
 else
-    echo -e "${YELLOW}⚠️  PostgreSQL connection failed. Make sure it's running.${NC}"
+    echo -e "${YELLOW}⚠️  PostgreSQL connection check skipped or service unreachable.${NC}"
 fi
 
 # Run migrations

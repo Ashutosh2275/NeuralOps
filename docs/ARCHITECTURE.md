@@ -1,82 +1,99 @@
-# SentinelOps AI — System Architecture
+# SentinelOps AI — Complete Platform Architecture
 
-## Service Boundaries
+## 1. System Overview
+SentinelOps AI is an enterprise-scale, event-driven AI operational intelligence platform for Kubernetes environments. It unifies real-time event streaming, dynamic topology intelligence, persistent vector retrieval (RAG), autonomous read-only tool calling, and human-in-the-loop governance into a deterministic operational engine.
 
-| Component | Responsibility | Input | Output |
-|-----------|---------------|-------|--------|
-| Event Collector | K8s watch + Prometheus scrape | Cluster API, PromQL | `so:events:raw` |
-| Metrics Pipeline | Threshold breach detection | Prometheus | MetricEvent |
-| Redis Event Bus | Durable async messaging | Stream XADD | Stream XREADGROUP |
-| Correlation Engine | Time-window event grouping | Enriched events | CorrelationEvent |
-| Dependency Engine | Graph construction | Labels, services, network | TopologySnapshot |
-| RCA Engine | Deterministic root cause | Event batch | RCAResult |
-| Agent Orchestrator | Parallel AI analysis | AgentContext | AgentResult[] |
-| Replay Engine | Incident timeline playback | Buffered events | Replay frames |
-| FastAPI API | REST + WebSocket | HTTP/WS | JSON |
-| React Dashboard | Visualization | API/WS | UI |
+---
 
-## Event Flow
+## 2. High-Level Architecture Diagram
 
+```mermaid
+flowchart TD
+    subgraph External Telemetry & Ingestion
+        K8S[Kubernetes Cluster API]
+        PROM[Prometheus Metrics]
+        LOKI[Loki Log Aggregator]
+        EVENTS[Event Stream Ingestion]
+    end
+
+    subgraph Core Processing Pipeline
+        NORM[Event Normalizer]
+        CORR[Incident Correlator]
+        TOPO[NetworkX Topology Engine]
+        REDIS[(Redis Streams Pipeline)]
+        DB[(PostgreSQL / SQLite)]
+    end
+
+    subgraph Autonomous Investigation Engine
+        PLANNER[Autonomous Planner / LLM]
+        REGISTRY[Tool Registry: 16 Read-Only Tools]
+        CORRELATOR[Evidence Correlator & Refuter]
+        RCA[Deterministic RCA Engine]
+        VEC[(Persistent Vector Store RAG)]
+    end
+
+    subgraph Security & Governance Layer
+        AUTH[RBAC: Viewer / Operator / Admin]
+        SAN[Prompt Injection Sanitizer]
+        RED[Centralized Secret Redactor]
+        AUDIT[(Structured Audit Trail)]
+        APPROVAL[Human Approval Workflow]
+    end
+
+    subgraph Presentation & Client Interfaces
+        REST[FastAPI REST Engine]
+        CLI[Terminal CLI: sentinelops]
+        DASH[Vite + React Dashboard]
+    end
+
+    K8S --> NORM
+    PROM --> NORM
+    LOKI --> NORM
+    EVENTS --> NORM
+    NORM --> REDIS
+    REDIS --> CORR
+    CORR --> TOPO
+    CORR --> DB
+
+    REST --> AUTH
+    AUTH --> PLANNER
+    PLANNER --> REGISTRY
+    REGISTRY --> K8S
+    REGISTRY --> PROM
+    REGISTRY --> LOKI
+    REGISTRY --> TOPO
+    REGISTRY --> VEC
+    REGISTRY --> RED
+    RED --> CORRELATOR
+    CORRELATOR --> RCA
+    RCA --> AUDIT
+    RCA --> APPROVAL
+    APPROVAL --> REST
+
+    REST --> DASH
+    CLI --> REST
 ```
-K8s API ──► EventCollector ──► so:events:raw
-                                    │
-Prometheus ──► MetricsPipeline ─────┤
-                                    ▼
-                            Worker (enrich)
-                                    │
-                                    ▼
-                          so:events:enriched
-                                    │
-                                    ▼
-                          CorrelationEngine
-                                    │
-                    ┌───────────────┼───────────────┐
-                    ▼               ▼               ▼
-            so:correlation    PostgreSQL      WebSocket
-                    │               │
-                    ▼               ▼
-              RCAEngine      IncidentService
-                    │
-                    ▼
-            AgentOrchestrator ──► Ollama
-                    │
-                    ▼
-            Recommendations + Replay buffer
-```
 
-## Redis Streams Topology
+---
 
-| Stream | Producer | Consumer Group | Purpose |
-|--------|----------|----------------|---------|
-| `so:events:raw` | Collector | sentinelops-collector | Raw ingress |
-| `so:events:enriched` | Worker | sentinelops-correlation | Normalized events |
-| `so:metrics` | Metrics pipeline | sentinelops-collector | Metric snapshots |
-| `so:correlation` | Correlation engine | sentinelops-correlation | Correlated groups |
-| `so:incidents` | Incident service | sentinelops-ai | Incident lifecycle |
-| `so:ai:tasks` | API/Worker | sentinelops-ai | Agent job queue |
-| `so:ai:results` | Agents | sentinelops-ai | Agent outputs |
-| `so:topology` | Dependency engine | sentinelops-collector | Graph updates |
-| `so:replay` | Replay engine | sentinelops-replay | Playback frames |
+## 3. Core Component Subsystems
 
-## PostgreSQL Schema Strategy
+### 3.1 Autonomous Tool Calling Framework
+- 16 registered operational tools spanning Kubernetes inspection, Prometheus metrics, Loki logs, topology impact, past incidents, and RAG knowledge.
+- In Phase 4, **all tools remain strictly `READ_ONLY`**. Mutating write actions are prohibited.
 
-- **Operational state**: clusters, pods, services, metrics (time-series samples)
-- **Graph state**: dependency_edges, topology_snapshots (JSON graph blobs)
-- **Incident state**: incidents, incident_timeline, incident_events, recommendations
-- **Indexes**: namespace+name on pods/services, timestamp on metrics/timeline, status on incidents
+### 3.2 Evidence Correlation & Deterministic RCA
+- Correlates multi-source telemetry items into cohesive investigation evidence.
+- Epistemic refutation: Healthy live states (`Running`, `ready=True`, `restarts=0`) actively refute stale alert triggers.
+- Grounded citations link every root-cause claim directly to specific evidence items.
 
-## AI Agent Pipeline
+### 3.3 Security & Governance Architecture
+- Deterministic RBAC with VIEWER, OPERATOR, and ADMIN roles.
+- Human approval governance for operational actions with strict Phase 4 execution blocking.
+- Centralized secret redactor sanitizing AWS keys, JWTs, Bearer tokens, DB credentials, and private keys.
+- Durable, append-oriented audit logging with automated data retention policies.
 
-1. Correlation triggers incident creation
-2. RCA Engine produces deterministic baseline
-3. Orchestrator fans out to specialized agents (CPU, Memory, Storage, Log, Correlation)
-4. RCA Agent enriches with Ollama
-5. Recommendation Agent produces prioritized kubectl actions
-
-## Deployment Modes
-
-| Mode | Use Case |
-|------|----------|
-| Docker Compose | Local dev, hackathon demo |
-| Minikube | Full K8s integration test |
-| In-cluster | Production-inspired edge deploy |
+### 3.4 Evaluation & Benchmarking Suite
+- 20 golden operational scenarios covering standard and adversarial failure modes.
+- Epistemic classification into `FACT`, `INFERENCE`, and `UNCERTAINTY`.
+- 10,000+ synthetic logical asset scale validation with sub-millisecond graph traversals.

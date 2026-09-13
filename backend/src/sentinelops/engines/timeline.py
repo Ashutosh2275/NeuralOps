@@ -28,6 +28,7 @@ class InfrastructureTimelineIntelligence:
             current_service=current_service,
             history=incident_history,
             current_time=current_incident.get("started_at", datetime.utcnow()),
+            current_incident=current_incident,
         )
 
         if not root_incident:
@@ -43,12 +44,20 @@ class InfrastructureTimelineIntelligence:
         # Calculate amplification
         amplification = self._calculate_amplification(evolution_chain)
 
+        inc_id = current_incident.get("id") or current_incident.get("incident_id") or uuid4()
+        if isinstance(inc_id, str):
+            inc_id = UUID(inc_id)
+
+        root_id = root_incident.get("id") or root_incident.get("incident_id") or uuid4()
+        if isinstance(root_id, str):
+            root_id = UUID(root_id)
+
         return IncidentAncestry(
-            incident_id=UUID(current_incident.get("id", str(uuid4()))),
-            root_incident_id=UUID(root_incident.get("id", str(uuid4()))),
+            incident_id=inc_id,
+            root_incident_id=root_id,
             ancestry_depth=len(evolution_chain),
             amplification_factor=amplification,
-            evolution_chain_json=json.dumps(evolution_chain),
+            evolution_chain_json=json.dumps(evolution_chain, default=str),
         )
 
     def _find_root_incident(
@@ -56,11 +65,27 @@ class InfrastructureTimelineIntelligence:
         current_service: str,
         history: list[dict],
         current_time: datetime,
+        current_incident: dict | None = None,
     ) -> dict | None:
         """Find the root cause incident."""
         lookback_window = timedelta(hours=6)
 
-        # Look for incidents that could have caused this one
+        # 1. First check if current incident explicitly points to root incident ID(s) in its cascade_chain
+        if current_incident:
+            cur_cascade = current_incident.get("cascade_chain", [])
+            if isinstance(cur_cascade, str):
+                try:
+                    cur_cascade = json.loads(cur_cascade)
+                except Exception:
+                    cur_cascade = []
+            if isinstance(cur_cascade, list):
+                for item in cur_cascade:
+                    target_id = str(item.get("id") if isinstance(item, dict) else item)
+                    for inc in history:
+                        if str(inc.get("id") or inc.get("incident_id")) == target_id:
+                            return inc
+
+        # 2. Look for prior incidents whose cascade chain reached current_service
         for incident in reversed(history):
             incident_time = incident.get("started_at")
             if isinstance(incident_time, str):
@@ -78,6 +103,14 @@ class InfrastructureTimelineIntelligence:
             if current_service in [c.get("service") if isinstance(c, dict) else c for c in cascade_chain]:
                 # Found potential root
                 return incident
+
+        # 3. Fallback: Return oldest prior incident in history window if available
+        prior_incidents = [
+            inc for inc in history
+            if str(inc.get("id")) != str((current_incident or {}).get("id"))
+        ]
+        if prior_incidents:
+            return prior_incidents[0]
 
         return None
 
@@ -190,6 +223,7 @@ class InfrastructureTimelineIntelligence:
             "root_event": None,
             "propagation_chain": [],
             "total_affected": 0,
+            "affected_service_count": 0,
             "propagation_depth": 0,
         }
 
@@ -197,12 +231,15 @@ class InfrastructureTimelineIntelligence:
         current_event_id = start_event_id
         visited = set()
 
-        while current_event_id and current_event_id not in visited:
-            visited.add(current_event_id)
+        while current_event_id and str(current_event_id) not in visited:
+            visited.add(str(current_event_id))
 
             # Find event in list
             event = next(
-                (e for e in all_events if str(e.get("event_id")) == str(current_event_id)),
+                (
+                    e for e in all_events
+                    if str(e.get("event_id") or e.get("id")) == str(current_event_id)
+                ),
                 None,
             )
 
@@ -216,10 +253,20 @@ class InfrastructureTimelineIntelligence:
             current_event_id = event.get("parent_event_id")
 
         lineage["propagation_depth"] = len(lineage["propagation_chain"])
-        lineage["total_affected"] = sum(
-            len(json.loads(e.get("affected_entities", "[]")))
-            for e in lineage["propagation_chain"]
-        )
+
+        total_affected = 0
+        for e in lineage["propagation_chain"]:
+            aff = e.get("affected_entities", [])
+            if isinstance(aff, str):
+                try:
+                    aff = json.loads(aff)
+                except Exception:
+                    aff = []
+            if isinstance(aff, list):
+                total_affected += len(aff)
+
+        lineage["total_affected"] = total_affected
+        lineage["affected_service_count"] = total_affected
 
         return lineage
 

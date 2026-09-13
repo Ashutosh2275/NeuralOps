@@ -37,7 +37,7 @@ const DEFAULTS: PlatformSettings = {
   replayAutoplay: false, replayCinematic: true, replaySpeed: 100,
 };
 
-const KEY = "neuralops-settings-v2";
+const KEY = "netraai-settings-v2";
 
 interface SettingsContextType {
   settings: PlatformSettings;

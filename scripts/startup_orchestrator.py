@@ -1,6 +1,6 @@
 """
 Startup Orchestrator — System 15
-Single entry-point to boot the entire NeuralOps stack.
+Single entry-point to boot the entire NetraAI stack.
 Preloads Ollama model, seeds topology, warms AI agents.
 """
 from __future__ import annotations
@@ -65,7 +65,7 @@ async def check_health() -> dict:
 
 async def main() -> None:
     print("\n╔══════════════════════════════════════════╗")
-    print("║   NeuralOps Startup Orchestrator v1.0   ║")
+    print("║   NetraAI Startup Orchestrator v1.0   ║")
     print("╚══════════════════════════════════════════╝\n")
 
     checks = [
@@ -90,7 +90,7 @@ async def main() -> None:
     await trigger_demo_scenario()
 
     print("\n╔══════════════════════════════════════════╗")
-    print("║   🚀  NeuralOps Platform is READY!       ║")
+    print("║   🚀  NetraAI Platform is READY!       ║")
     print("║   Frontend → http://localhost:5173       ║")
     print("║   Backend  → http://localhost:8000       ║")
     print("║   API Docs → http://localhost:8000/docs  ║")

@@ -78,21 +78,23 @@ class PredictiveIncidentForecastingEngine:
         """Forecast pod crash probability."""
         service = incident.get("root_service", "unknown")
 
+        def is_crash(i: dict) -> bool:
+            cause = str(i.get("root_cause", "")).lower()
+            err = str(i.get("error_type", "")).lower()
+            inc_type = str(i.get("incident_type", "")).lower()
+            return "crash" in cause or "crash" in err or "crash" in inc_type
+
         # Count recent crashes for this service
         recent_crashes = sum(
             1 for i in history[-20:]
-            if i.get("root_service") == service and "crash" in i.get("root_cause", "").lower()
+            if i.get("root_service") == service and is_crash(i)
         )
 
         if recent_crashes < 2:
             return None
 
-        # Calculate probability based on frequency
-        crash_frequency_per_day = (recent_crashes / len(history)) * 24 if history else 0
-        probability = min(0.95, crash_frequency_per_day / 24.0 * 100)
-
-        if probability < 0.3:
-            return None
+        # Calculate probability bounded in [0.0, 1.0]
+        probability = min(0.95, max(0.3, recent_crashes / max(len(history), 1)))
 
         forecast_time = datetime.utcnow() + timedelta(hours=horizon_hours // 2)
 
@@ -119,19 +121,22 @@ class PredictiveIncidentForecastingEngine:
         """Forecast memory-related incidents."""
         service = incident.get("root_service", "unknown")
 
+        def is_memory(i: dict) -> bool:
+            cause = str(i.get("root_cause", "")).lower()
+            err = str(i.get("error_type", "")).lower()
+            inc_type = str(i.get("incident_type", "")).lower()
+            return any(k in cause or k in err or k in inc_type for k in ("memory", "oom"))
+
         # Check for memory issues in history
         memory_incidents = sum(
             1 for i in history[-20:]
-            if i.get("root_service") == service and "memory" in i.get("root_cause", "").lower()
+            if i.get("root_service") == service and is_memory(i)
         )
 
         if memory_incidents < 1:
             return None
 
-        probability = min(0.85, 0.3 + (memory_incidents / 10.0) * 0.5)
-
-        if probability < 0.3:
-            return None
+        probability = min(0.85, max(0.3, 0.3 + (memory_incidents / 10.0) * 0.5))
 
         forecast_time = datetime.utcnow() + timedelta(hours=horizon_hours // 3)
 
@@ -161,24 +166,25 @@ class PredictiveIncidentForecastingEngine:
         # Check cascade history
         cascade_incidents = sum(
             1 for i in history[-30:]
-            if isinstance(i.get("cascade_chain"), list) and len(i.get("cascade_chain", [])) > 2
+            if (isinstance(i.get("cascade_chain"), list) and len(i.get("cascade_chain", [])) > 1)
+            or (isinstance(i.get("affected_services"), list) and len(i.get("affected_services", [])) >= 2)
+            or "cascade" in str(i.get("root_cause", "")).lower()
+            or "cascade" in str(i.get("incident_type", "")).lower()
         )
 
         if cascade_incidents < 1:
             return None
 
         # Check if service is in dependency chain
-        dependencies = topology.get("dependencies", {}).get(service, [])
-        probability = min(0.8, 0.2 + (cascade_incidents / 10.0) * 0.5 + (len(dependencies) / 20.0) * 0.2)
-
-        if probability < 0.25:
-            return None
+        dependencies = topology.get("dependencies", {})
+        service_deps = dependencies.get(service, []) if isinstance(dependencies, dict) else []
+        probability = min(0.85, max(0.3, 0.2 + (cascade_incidents / 10.0) * 0.5 + (len(service_deps) / 20.0) * 0.2))
 
         forecast_time = datetime.utcnow() + timedelta(hours=horizon_hours // 2)
 
         return IncidentForecast(
             cluster_id=cluster_id,
-            forecast_type="cascade_failure",
+            forecast_type="cascading_failure",
             target_service=service,
             probability=probability,
             confidence_score=min(0.85, 0.5 + (len(dependencies) / 30.0) * 0.3),

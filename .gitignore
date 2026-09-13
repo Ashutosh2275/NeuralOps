@@ -44,9 +44,21 @@ data/
 postgres_data/
 redis_data/
 
-# Kubernetes secrets
+# Kubernetes secrets & keys
 **/secrets.yaml
 !**/secrets.yaml.example
+*.key
+*.crt
+*.pem
+infra/prometheus/*.key
+infra/prometheus/*.crt
+infra/*-bin/
+infra/*-data/
+infra/*_data/
+infra/k3s-bin/
+infra/loki-bin/
+infra/prometheus-bin/
+infra/redis-5/
 
 # Minikube
 .minikube/

@@ -141,22 +141,37 @@ class RCAEngine:
         return primary
 
     def _describe_event(self, event: BaseEvent) -> str:
-        etype = event.event_type.value
+        etype = event.event_type.value if hasattr(event.event_type, "value") else str(event.event_type)
+        pod_target = (
+            event.payload.get("pod_name")
+            or event.payload.get("pod")
+            or event.payload.get("service_name")
+            or event.payload.get("service")
+            or event.labels.get("app")
+            or "workload"
+        )
         if etype == "pod":
-            return (
-                f"Pod {event.payload.get('pod_name')} ({event.payload.get('phase')}) "
-                f"— {event.payload.get('reason', 'unknown')}"
-            )
+            phase = event.payload.get("phase") or "Unknown"
+            reason = event.payload.get("reason") or "unspecified disturbance"
+            return f"Pod {pod_target} ({phase}) — {reason}"
         if etype == "metric":
-            return (
-                f"{event.payload.get('metric_name')}={event.payload.get('value')} "
-                f"exceeded threshold on {event.payload.get('pod_name')}"
+            metric_name = (
+                event.payload.get("metric_name")
+                or event.payload.get("metric")
+                or event.payload.get("name")
+                or "Resource usage"
             )
+            val = event.payload.get("metric_value") or event.payload.get("value")
+            val_str = f"{val}%" if isinstance(val, (int, float)) and val <= 100 else str(val) if val is not None else "high"
+            return f"{metric_name}={val_str} threshold exceeded on {pod_target}"
         if etype == "anomaly":
-            return f"Anomaly {event.payload.get('anomaly_type')} on {event.payload.get('pod_name', 'unknown')}"
+            atype = event.payload.get("anomaly_type") or "Resource saturation"
+            return f"Anomaly {atype} on {pod_target}"
         if etype == "log":
-            return f"Log pattern: {event.payload.get('anomaly_type', 'error')} — {str(event.payload.get('log_line', ''))[:80]}"
-        return f"{etype} from {event.source}"
+            ltype = event.payload.get("anomaly_type") or "error"
+            line = str(event.payload.get("log_line") or event.payload.get("message") or "")[:80]
+            return f"Log pattern: {ltype} — {line}"
+        return f"{etype} from {event.source or pod_target}"
 
     def enrich_incident(self, incident: IncidentEvent, result: RCAResult) -> IncidentEvent:
         incident.payload["root_cause"] = result.root_cause

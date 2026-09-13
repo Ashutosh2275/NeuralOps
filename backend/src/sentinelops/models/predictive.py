@@ -51,6 +51,16 @@ class IncidentAncestry(Base):
     incident: Mapped["Incident"] = relationship("Incident", foreign_keys=[incident_id])  # noqa: F821
     root_incident: Mapped["Incident"] = relationship("Incident", foreign_keys=[root_incident_id])  # noqa: F821
 
+    @property
+    def evolution_chain(self) -> list[dict]:
+        import json
+        if not self.evolution_chain_json:
+            return []
+        try:
+            return json.loads(self.evolution_chain_json)
+        except Exception:
+            return []
+
 
 class ServiceHealthScore(Base):
     __tablename__ = "service_health_scores"

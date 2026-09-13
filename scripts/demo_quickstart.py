@@ -8,7 +8,7 @@ BASE = "http://localhost:8000"
 
 
 async def main() -> None:
-    print("🚀  NeuralOps Demo Quickstart")
+    print("🚀  NetraAI Demo Quickstart")
     print("   Warming up infrastructure... Injecting chaos simulation...")
 
     async with httpx.AsyncClient() as c:

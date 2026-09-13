@@ -1,6 +1,6 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { usePlatform, useReasoningLog, useAgentActivity } from "../contexts/PlatformContext";
+import { usePlatform, useReasoningLog, useAgentActivity, type ReasoningEntry } from "../contexts/PlatformContext";
 import {
   Brain, Cpu, Zap, Activity, CheckCircle2, Clock, AlertTriangle,
   RefreshCw, Wifi, BarChart3, GitBranch, TrendingUp
@@ -15,6 +15,68 @@ const AGENTS = [
   { id: "network",       name: "Network Monitor", icon: <Wifi className="w-4 h-4" />,        color: "text-blue-400",    border: "border-blue-500/30",    bg: "rgba(59,130,246,0.06)",   role: "Latency Tracking",       model: "mistral:7b"  },
   { id: "summarization", name: "Summarizer",      icon: <BarChart3 className="w-4 h-4" />,   color: "text-green-400",   border: "border-green-500/30",   bg: "rgba(16,185,129,0.06)",   role: "Incident Summarization", model: "llama3.2:3b" },
 ];
+
+/** Compact scrollable log — fixed height, append-only, no layout refresh animations */
+function LiveReasoningStream({ entries }: { entries: ReasoningEntry[] }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const prevLenRef = useRef(0);
+
+  const chronological = useMemo(
+    () => [...entries].reverse(),
+    [entries]
+  );
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || entries.length === prevLenRef.current) return;
+    prevLenRef.current = entries.length;
+    el.scrollTop = el.scrollHeight;
+  }, [entries.length, chronological]);
+
+  return (
+    <div
+      className="glass-panel rounded-xl border border-sentinel-accent/15 flex flex-col shrink-0"
+      style={{ height: 400 }}
+    >
+      <div className="px-4 py-2.5 border-b border-sentinel-700/40 flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-sentinel-accent animate-pulse" />
+          <span className="text-xs font-display font-semibold text-white">Live Reasoning Stream</span>
+        </div>
+        <span className="text-[9px] font-mono text-gray-500 tabular-nums">{entries.length} signals</span>
+      </div>
+      <div
+        ref={scrollRef}
+        className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-2.5 space-y-1 scrollbar-thin scrollbar-thumb-cyan-500/20 scrollbar-track-transparent"
+      >
+        {chronological.length === 0 ? (
+          <p className="text-center text-gray-700 text-[9px] font-mono uppercase tracking-widest py-6">
+            Waiting for agent signals...
+          </p>
+        ) : (
+          chronological.map((r) => (
+            <div
+              key={r.id}
+              className={`terminal-line text-[9px] leading-relaxed shrink-0 ${
+                r.kind === "critical"
+                  ? "!border-red-500/50 !text-red-400"
+                  : r.kind === "success"
+                    ? "!border-green-500/50 !text-green-400"
+                    : r.kind === "warn"
+                      ? "!border-yellow-500/50 !text-yellow-400"
+                      : ""
+              }`}
+            >
+              <span className="ts">[{r.ts}]</span>{" "}
+              <span className="opacity-60 mr-1">[{r.agent}]</span>
+              {r.text}
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
 
 function StatusBadge({ status }: { status: "idle" | "active" | "thinking" | undefined }) {
   if (!status || status === "idle") {
@@ -175,8 +237,8 @@ export default function AIAgents() {
           </AnimatePresence>
         </div>
 
-        {/* Right — global reasoning stream */}
-        <div className="col-span-5 flex flex-col gap-3 h-full overflow-hidden">
+        {/* Right — metrics + compact reasoning stream */}
+        <div className="col-span-5 flex flex-col gap-3 shrink-0">
           {/* System Metrics */}
           <div className="glass-panel rounded-xl border border-sentinel-700/40 p-4">
             <p className="text-[9px] font-mono text-gray-500 uppercase tracking-widest mb-3">System Performance</p>
@@ -205,35 +267,7 @@ export default function AIAgents() {
             </div>
           </div>
 
-          {/* Live Reasoning Stream */}
-          <div className="glass-panel rounded-xl border border-sentinel-accent/15 flex flex-col flex-1 overflow-hidden">
-            <div className="px-4 py-3 border-b border-sentinel-700/40 flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-sentinel-accent animate-pulse" />
-                <span className="text-xs font-display font-semibold text-white">Live Reasoning Stream</span>
-              </div>
-              <span className="text-[9px] font-mono text-gray-500">{reasoning.length} signals</span>
-            </div>
-            <div className="flex-1 overflow-y-auto p-3 space-y-1.5 relative">
-              <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-sentinel-900/90 to-transparent z-10 pointer-events-none" />
-              <AnimatePresence mode="popLayout">
-                {reasoning.slice(0, 25).map(r => (
-                  <motion.div key={r.id} initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-                    className={`terminal-line text-[9px] ${r.kind === "critical" ? "!border-red-500/50 !text-red-400" : r.kind === "success" ? "!border-green-500/50 !text-green-400" : r.kind === "warn" ? "!border-yellow-500/50 !text-yellow-400" : ""}`}>
-                    <span className="ts">[{r.ts}]</span>{" "}
-                    <span className="opacity-60 mr-1">[{r.agent}]</span>
-                    {r.text}
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-              {reasoning.length === 0 && (
-                <p className="text-center text-gray-700 text-[9px] font-mono uppercase tracking-widest py-8 animate-pulse">
-                  Initializing AI inference engine...
-                </p>
-              )}
-            </div>
-          </div>
+          <LiveReasoningStream entries={reasoning} />
         </div>
       </div>
     </div>

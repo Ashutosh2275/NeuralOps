@@ -192,18 +192,31 @@ class AIConfidenceValidator:
     ) -> list[str]:
         """Find services mentioned that don't exist in topology."""
         impossible = []
-        known_services = set(topology.get("services", {}).keys())
+        raw_services = topology.get("services", {})
+        if isinstance(raw_services, dict):
+            known_services = set(raw_services.keys())
+        elif isinstance(raw_services, list):
+            known_services = set(raw_services)
+        else:
+            known_services = set()
 
-        # Extract service names from reasoning (simple heuristic)
+        # Extract service names from reasoning
         words = rca_reasoning.split()
-        for word in words:
-            cleaned = word.lower().strip(".,;:")
-            if cleaned in ["service", "pod", "node"]:
+        for i, word in enumerate(words):
+            cleaned = word.lower().strip(".,;:\"'")
+            if not cleaned or cleaned in ["service", "pod", "node", "the", "a", "an", "due", "to", "in"]:
                 continue
 
-            # Simple heuristic: words after "service" might be service names
-            if cleaned.startswith("service-") and cleaned not in known_services:
-                impossible.append(cleaned)
+            prev_word = words[i - 1].lower().strip(".,;:\"'") if i > 0 else ""
+            is_quoted = (word.startswith("'") or word.startswith('"') or word.endswith("'") or word.endswith('"'))
+            is_prefixed = cleaned.startswith("service-")
+            is_following_service = prev_word in ["service", "services"]
+
+            if is_quoted or is_prefixed or is_following_service:
+                if cleaned not in known_services and cleaned not in [
+                    "degraded", "failure", "unhealthy", "crash", "restart", "down", "overloading", "timeout"
+                ]:
+                    impossible.append(cleaned)
 
         return impossible
 

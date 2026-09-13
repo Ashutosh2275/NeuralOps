@@ -2,7 +2,7 @@ import asyncio
 import json
 import random
 from datetime import datetime, timedelta
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from sentinelops.models.simulation import (
     SimulatedIncident,
@@ -42,6 +42,7 @@ class ChaosSimulator:
     ) -> SimulatedIncident:
         """Simulate CPU spike storms across pods."""
         sim = SimulatedIncident(
+            id=uuid4(),
             cluster_id=cluster_id,
             simulation_type=SimulationType.CPU_SPIKE,
             severity=severity,
@@ -66,7 +67,7 @@ class ChaosSimulator:
             "severity": severity,
         })
 
-        await self._simulate_degradation(sim, target_pods)
+        asyncio.create_task(self._simulate_degradation(sim, target_pods))
         return sim
 
     async def trigger_memory_leak(
@@ -79,6 +80,7 @@ class ChaosSimulator:
     ) -> SimulatedIncident:
         """Simulate memory leak degradation."""
         sim = SimulatedIncident(
+            id=uuid4(),
             cluster_id=cluster_id,
             simulation_type=SimulationType.MEMORY_LEAK,
             severity=severity,
@@ -103,7 +105,7 @@ class ChaosSimulator:
             "severity": severity,
         })
 
-        await self._simulate_degradation(sim, target_pods)
+        asyncio.create_task(self._simulate_degradation(sim, target_pods))
         return sim
 
     async def trigger_pvc_saturation(
@@ -116,6 +118,7 @@ class ChaosSimulator:
     ) -> SimulatedIncident:
         """Simulate PVC storage saturation."""
         sim = SimulatedIncident(
+            id=uuid4(),
             cluster_id=cluster_id,
             simulation_type=SimulationType.PVC_SATURATION,
             severity=severity,
@@ -140,7 +143,7 @@ class ChaosSimulator:
             "pods": target_pods,
         })
 
-        await self._simulate_degradation(sim, target_pods)
+        asyncio.create_task(self._simulate_degradation(sim, target_pods))
         return sim
 
     async def trigger_network_latency(
@@ -154,6 +157,7 @@ class ChaosSimulator:
     ) -> SimulatedIncident:
         """Simulate network latency."""
         sim = SimulatedIncident(
+            id=uuid4(),
             cluster_id=cluster_id,
             simulation_type=SimulationType.NETWORK_LATENCY,
             severity=severity,
@@ -177,7 +181,7 @@ class ChaosSimulator:
             "latency_ms": latency_ms,
         })
 
-        await self._simulate_degradation(sim, [])
+        asyncio.create_task(self._simulate_degradation(sim, []))
         return sim
 
     async def trigger_cascading_multi_service_failure(
@@ -190,6 +194,7 @@ class ChaosSimulator:
     ) -> SimulatedIncident:
         """Simulate cascading failure across multiple services."""
         sim = SimulatedIncident(
+            id=uuid4(),
             cluster_id=cluster_id,
             simulation_type=SimulationType.CASCADING_MULTI_SERVICE,
             severity=severity,
@@ -212,7 +217,7 @@ class ChaosSimulator:
             "propagation_depth": len(service_chain),
         })
 
-        await self._simulate_cascading_degradation(sim, service_chain)
+        asyncio.create_task(self._simulate_cascading_degradation(sim, service_chain))
         return sim
 
     async def _simulate_degradation(self, sim: SimulatedIncident, target_pods: list[str]):

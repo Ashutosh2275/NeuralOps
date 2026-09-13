@@ -1,11 +1,14 @@
 # SentinelOps AI — Project Structure
 
-```
 NeuralOps/
 ├── .env.example
 ├── docker-compose.yml
 ├── Makefile
+├── LICENSE
+├── pytest.ini
 ├── README.md
+├── start.bat
+├── start.sh
 │
 ├── backend/
 │   ├── Dockerfile
@@ -13,54 +16,54 @@ NeuralOps/
 │   ├── alembic.ini
 │   ├── alembic/
 │   │   ├── env.py
-│   │   └── versions/001_initial_schema.py
+│   │   └── versions/
 │   └── src/sentinelops/
-│       ├── main.py                    # FastAPI entrypoint
-│       ├── config/settings.py         # Pydantic settings
-│       ├── core/                      # DB, Redis, logging
-│       ├── events/schemas.py          # Event models
-│       ├── streams/                   # Redis Streams bus
-│       ├── models/                    # SQLAlchemy ORM
-│       ├── collectors/                # K8s + Prometheus
-│       ├── engines/                   # Correlation, RCA, Replay, Topology
-│       ├── agents/                    # 7 AI agents + orchestrator
-│       ├── services/                  # Business logic
-│       ├── api/routes/                # REST endpoints
-│       ├── websocket/hub.py           # Real-time broadcast
-│       └── workers/runner.py          # Background consumers
+│       ├── main.py                    # FastAPI application entrypoint
+│       ├── config/settings.py         # Pydantic configuration
+│       ├── core/                      # Database, Redis, logging infrastructure
+│       ├── collectors/                # K8s Informer + Prometheus/Loki collectors
+│       ├── events/                    # Event schemas and streams
+│       ├── investigation/             # ReAct investigation engine & state machine
+│       ├── tools/                     # 16 read-only diagnostic tools
+│       ├── rag/                       # Vector RAG & SQLite embeddings store
+│       ├── observability/             # Pod log shipping daemon & metric probes
+│       ├── security/                  # RBAC, audit log, secret redactor
+│       ├── services/                  # Incident, topology, and workload domain services
+│       └── api/routes/                # Versioned REST and WebSocket endpoints
 │
 ├── frontend/
 │   ├── src/
-│   │   ├── pages/                     # Dashboard, Incidents, Topology, NLP, Replay
-│   │   ├── components/                # Layout, DependencyGraph
-│   │   ├── hooks/useWebSocket.ts
-│   │   └── lib/api.ts
+│   │   ├── pages/                     # 13 verified operational screens
+│   │   ├── components/                # Layout, DependencyGraph, modals, UI primitives
+│   │   ├── contexts/                  # PlatformContext, SettingsContext
+│   │   └── lib/api.ts                 # Strongly typed backend API client
 │   ├── package.json
 │   └── vite.config.ts
 │
-├── schemas/events/v1/                 # JSON Schema contracts
-│   ├── base_event.json
-│   ├── pod_event.json
-│   ├── metric_event.json
-│   └── incident_event.json
-│
 ├── infra/
-│   ├── prometheus/
-│   ├── loki/
-│   ├── docker/postgres/
-│   └── kubernetes/
-│       ├── sentinelops/
-│       ├── ecommerce-demo/
-│       └── configmaps/
+│   ├── prometheus/                    # Prometheus scrapers and alert rules
+│   ├── loki/                          # Loki chunk configs
+│   ├── docker/postgres/               # PostgreSQL schema migrations
+│   └── kubernetes/                    # E2E workloads and cluster manifests
 │
 ├── docs/
-│   ├── ARCHITECTURE.md
-│   ├── MVP_BUILD_ORDER.md
-│   └── PROJECT_STRUCTURE.md
+│   ├── ARCHITECTURE.md                # System and agent architecture
+│   ├── DEMO.md                        # Deterministic 3-5 minute live demo guide
+│   ├── INTERVIEW_GUIDE.md             # Technical QA & HCLTech competency guide
+│   ├── RBAC_MATRIX.md                 # 3-tier authorization matrix
+│   ├── RELEASE.md                     # Phase 14 verification & certification report
+│   ├── SECURITY.md                    # Threat model & secret redaction
+│   ├── TESTING.md                     # Pytest, Playwright & contract test suite
+│   ├── UI_BACKEND_MAPPING.md          # 13 screens to 20 endpoints mapping
+│   ├── assets/                        # High-resolution verified screenshots
+│   └── history/                       # Historical development phase records
 │
 └── scripts/
-    └── fix_div_tags.py
-```
+    ├── final_verify.ps1               # Master 5-stage verification gate
+    ├── start_local.ps1                # Local environment orchestrator
+    ├── verify_real_environment.py     # Live infrastructure probe
+    ├── verify_backend_contracts.py    # 20-endpoint contract test
+    └── test_phase13_browser_certification.py
 
 ## Naming Conventions
 

@@ -1,6 +1,6 @@
-﻿import React, { useEffect, useState, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { usePlatform, useReasoningLog } from "../contexts/PlatformContext";
+﻿import React, { useEffect, useState, useRef } from "react";
+import { motion } from "framer-motion";
+import { usePlatform, useReasoningLog, type ReasoningEntry } from "../contexts/PlatformContext";
 import {
   Activity, AlertTriangle, Shield, Terminal, Clock, Server, CheckCircle, 
   Cpu, Zap, TrendingUp, ChevronRight, CornerDownRight, Crosshair, Network
@@ -45,51 +45,83 @@ const FALLBACK_REMEDIATION = [
   { id: "R-5", phase: "RESOLUTION", text: "Close incident INC-2049", status: "pending", time: "-" },
 ];
 
-// â”€â”€ Sub-Components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+const WAR_ROOM_SEED_LOGS: ReasoningEntry[] = [
+  { id: "wr-seed-1", kind: "success", agent: "Summarizer", text: "SLA compliance: 99.1%. Within tolerance window.", ts: new Date().toLocaleTimeString() },
+  { id: "wr-seed-2", kind: "warn", agent: "Network Monitor", text: "Network partition isolated to zone-b. No cross-zone propagation.", ts: new Date().toLocaleTimeString() },
+  { id: "wr-seed-3", kind: "critical", agent: "Memory Agent", text: "Memory spike in catalog-service. RSS 1.8GB exceeds threshold.", ts: new Date().toLocaleTimeString() },
+];
+
+/** Append-only stream — never resets list; scroll inside fixed panel */
 function CognitiveStream() {
   const reasoning = useReasoningLog();
-  
-  // Use real reasoning, fallback if empty
-  const defaultReasoning = [
-    { id: '1', kind: 'critical', agent: 'RCACore', text: 'Cascading latency detected originating from payment-queue.' },
-    { id: '2', kind: 'info', agent: 'Predictive', text: 'Analyzing blast radius: Postgres DB at 74% risk.' },
-    { id: '3', kind: 'warn', agent: 'Correlator', text: 'TCP timeouts correlating with high Memory IO.' }
-  ];
-  const items = reasoning?.length > 0 ? reasoning : defaultReasoning;
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const seenIdsRef = useRef<Set<string>>(new Set());
+  const [stream, setStream] = useState<ReasoningEntry[]>(WAR_ROOM_SEED_LOGS);
+
+  useEffect(() => {
+    const fresh = reasoning.filter((e) => !seenIdsRef.current.has(e.id));
+    if (fresh.length === 0) return;
+    fresh.forEach((e) => seenIdsRef.current.add(e.id));
+    const ordered = [...fresh].reverse();
+    setStream((prev) => {
+      const merged = [...prev, ...ordered];
+      return merged.length > 200 ? merged.slice(-200) : merged;
+    });
+  }, [reasoning]);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, [stream.length]);
 
   return (
-    <div 
-      style={{ 
-        flex: 1, 
-        overflowY: "auto", 
-        overflowX: "hidden",
-        minHeight: 0,
-        display: "flex", 
-        flexDirection: "column", 
-        gap: 8, 
-        padding: "0 8px 0 4px",
-      }}
+    <div
+      ref={scrollRef}
       className="scrollbar-thin scrollbar-thumb-cyan-500/20 scrollbar-track-transparent"
+      style={{
+        flex: 1,
+        minHeight: 0,
+        overflowY: "auto",
+        overflowX: "hidden",
+        display: "flex",
+        flexDirection: "column",
+        gap: 8,
+        padding: "0 8px 4px 4px",
+      }}
     >
-      <AnimatePresence mode="popLayout">
-        {items.slice(0, 50).map((log: any) => {
-          const c = log.kind === "critical" ? "#ef4444" : log.kind === "warn" ? "#f97316" : log.kind === "success" ? "#10b981" : "#22d3ee";
-          return (
-             <motion.div key={log.id} layout transition={{ type: "spring", stiffness: 350, damping: 25 }} initial={{ opacity: 0, x: -10, filter: "blur(4px)" }} animate={{ opacity: 1, x: 0, filter: "blur(0px)" }} exit={{ opacity: 0, scale: 0.95 }}
-               style={{
-                 background: `linear-gradient(90deg, ${c}11, transparent)`,
-                 borderLeft: `2px solid ${c}`, padding: "0.5rem 0.75rem", borderRadius: "0 6px 6px 0",
-                 fontFamily: "JetBrains Mono", fontSize: "0.55rem", lineHeight: 1.5, color: "rgba(255,255,255,0.75)"
-               }}>
-               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                 <span style={{ color: c, fontWeight: 700 }}>[{log.agent}]</span>
-                 <span style={{ color: "rgba(255,255,255,0.3)" }}>{log.ts || new Date().toLocaleTimeString()}</span>
-               </div>
-               <div>{log.text}</div>
-             </motion.div>
-          )
-        })}
-      </AnimatePresence>
+      {stream.map((log) => {
+        const c =
+          log.kind === "critical"
+            ? "#ef4444"
+            : log.kind === "warn"
+              ? "#f97316"
+              : log.kind === "success"
+                ? "#10b981"
+                : "#22d3ee";
+        return (
+          <div
+            key={log.id}
+            style={{
+              flexShrink: 0,
+              background: `linear-gradient(90deg, ${c}11, transparent)`,
+              borderLeft: `2px solid ${c}`,
+              padding: "0.5rem 0.75rem",
+              borderRadius: "0 6px 6px 0",
+              fontFamily: "JetBrains Mono",
+              fontSize: "0.55rem",
+              lineHeight: 1.5,
+              color: "rgba(255,255,255,0.75)",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+              <span style={{ color: c, fontWeight: 700 }}>[{log.agent}]</span>
+              <span style={{ color: "rgba(255,255,255,0.3)" }}>{log.ts}</span>
+            </div>
+            <div>{log.text}</div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -228,11 +260,22 @@ function ConsensusForecast() {
 // â”€â”€ Main Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export default function IncidentCommandCenter() {
   const { state } = usePlatform();
+  const reasoning = useReasoningLog();
   const { topology, criticalCount, incidents } = state;
   const activeIncident = incidents[0] || { title: "INC-2049: Latency Cascade", severity: "critical", id: "INC-2049" };
 
   return (
-    <div style={{ height: "100%", display: "flex", flexDirection: "column", gap: 16, minHeight: 0, paddingRight: 4 }}>
+    <div
+      style={{
+        height: "calc(100vh - 128px)",
+        overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
+        gap: 12,
+        minHeight: 0,
+        paddingRight: 4,
+      }}
+    >
       
       {/* â”€â”€ Top Command Bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <header style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexShrink: 0 }}>
@@ -274,16 +317,41 @@ export default function IncidentCommandCenter() {
         </div>
       </header>
 
-      {/* â”€â”€ Main Operations Grid â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}      <div style={{ flex: 1, display: "grid", gridTemplateColumns: "1.1fr 1.3fr 1fr", gap: 16, minHeight: 0 }}>
-        
-        {/* LEFT PANEL: Cognitive Stream */}
-        <div style={{ ...P, flex: 1, display: "flex", flexDirection: "column", padding: "1rem", overflow: "hidden", minHeight: 0 }}>
-          <div style={PH}><Cpu size={14} color="#22d3ee" /> Cognitive Engine Stream</div>
+      <div
+        style={{
+          flex: 1,
+          minHeight: 0,
+          display: "grid",
+          gridTemplateColumns: "1.1fr 1.3fr 1fr",
+          gap: 12,
+          overflow: "hidden",
+        }}
+      >
+        {/* LEFT PANEL: Cognitive Stream — fixed height, internal scroll only */}
+        <div
+          style={{
+            ...P,
+            display: "flex",
+            flexDirection: "column",
+            padding: "0.75rem 1rem",
+            overflow: "hidden",
+            minHeight: 0,
+            height: "100%",
+          }}
+        >
+          <div style={{ ...PH, flexShrink: 0, justifyContent: "space-between" }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <Cpu size={14} color="#22d3ee" /> Cognitive Engine Stream
+            </span>
+            <span style={{ fontSize: "0.45rem", fontFamily: "JetBrains Mono", opacity: 0.45 }}>
+              {reasoning.length} live
+            </span>
+          </div>
           <CognitiveStream />
         </div>
 
         {/* CENTER PANEL: Incident Remediation Timeline */}
-        <div style={{ ...P, display: "flex", flexDirection: "column", padding: "1rem", minHeight: 0 }}>
+        <div style={{ ...P, display: "flex", flexDirection: "column", padding: "0.75rem 1rem", minHeight: 0, overflow: "hidden", height: "100%" }}>
           <div style={PH}><Terminal size={14} color="#10b981" /> Remediation Orchestration</div>
           <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 16, marginTop: 8, overflow: "hidden" }}>
              <RemediationTimeline />
@@ -300,8 +368,8 @@ export default function IncidentCommandCenter() {
         </div>
 
         {/* RIGHT PANEL: Compact Metrics & Forecast */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 16, minHeight: 0 }}>
-          <div style={{ ...P, flex: 1, display: "flex", flexDirection: "column", padding: "1rem", minHeight: 0 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, minHeight: 0, overflow: "hidden", height: "100%" }}>
+          <div style={{ ...P, flex: 1, display: "flex", flexDirection: "column", padding: "0.75rem 1rem", minHeight: 0, overflow: "hidden" }}>
             <div style={PH}><Activity size={14} color="#f97316" /> Compact Metrics</div>
             <CompactMetrics topology={topology} />
           </div>
